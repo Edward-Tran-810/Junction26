@@ -148,6 +148,15 @@ grasp:
     - [1.0, -1.0, 0.0]
     - [0.0, -1.0, 0.0]
   finger_hint_weight: 0.3
+  # Grasp type from geometry (grasp_select.py): centred three-finger grasp when the object is wide enough for both
+  # finger pads (>= spacing + pad), else thumb-vs-one-finger pinch with the object shifted off the centre line so it
+  # cannot wedge between index and middle. The lateral value replaces point_in_palm[2]; x / y stay as configured.
+  select:
+    enabled: true
+    pad_width: 0.018          # m, width of a Dex3 finger pad (index / middle link). TUNE: measure the real finger
+    clearance: 0.003          # m between the object and the finger that is NOT used in a pinch
+    pinch_lateral: 0.015      # m, preferred offset for a pinch (the sim-validated value); clipped to what geometry allows
+    height_frac: 0.5          # grasp at the middle of the object's own height
   retry_rotate_hints: true    # a retry of the same object starts with the NEXT finger direction (not the same grasp again)
   height_frac: 0.5            # grasp point z = counter + height_frac * object size (before fingertip check)
   fingertip_clearance: 0.012  # fingertips (preshape posture, URDF) stay this far above the counter at grasp

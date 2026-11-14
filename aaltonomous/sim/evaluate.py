@@ -185,7 +185,7 @@ def evaluate(a):
             dr = None
             if sim_info.get("dr"):
                 dr = sc.call(cmd="randomize", seed=seed).get("params")
-            rec = Recorder(out_dir / f"episode_{i:03d}")
+            rec = Recorder(out_dir / f"episode_{i:03d}", video=a.video)
             t0 = time.monotonic()
             try:
                 summary, events = run_episode(env, client, i, seed, rec, stop, a.task)
@@ -319,6 +319,7 @@ def main(argv=None):
     ap.add_argument("--gate-min-hz", type=float, default=27.0)
     ap.add_argument("--no-head-rgbd", action="store_true", help="head_rgb from teleimager instead of :55560")
     ap.add_argument("--no-cameras", action="store_true", help="no teleimager (wrist cams blank); oracle runs")
+    ap.add_argument("--video", action="store_true", help="also write episode_NNN.mp4 (head camera, one frame per tick)")
     ap.add_argument("-v", "--verbose", action="store_true")
     a = ap.parse_args(argv)
     logging.basicConfig(level=logging.WARNING)

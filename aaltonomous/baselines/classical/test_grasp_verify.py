@@ -237,3 +237,57 @@ class TestRLIntegration(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestGraspSelection(unittest.TestCase):
+    """Issue 2 (wedged between index and middle): the grasp type follows from object width vs finger spacing."""
+
+    @classmethod
+    def setUpClass(cls):
+        from aaltonomous.baselines.classical import grasp_select
+        from aaltonomous.baselines.classical.config import hand_postures
+        from aaltonomous.baselines.classical.kinematics import ArmKinematics
+        from aaltonomous.scene.scene import Scene
+        cls.G, cls.cfg, cls.sc = grasp_select, load_config(), Scene.load(None)
+        cls.hand = grasp_select.hand_geometry(ArmKinematics(cls.cfg), hand_postures(cls.cfg),
+                                              cls.cfg["grasp"]["select"]["pad_width"])
+
+    def sel(self, shape, width=None):
+        d = dict(self.sc.object_dims(shape))
+        if width is not None:
+            d["side"] = d["side"] * width / d["width"]; d["width"] = width
+        return self.G.select(shape, d, self.hand, self.cfg["grasp"]["select"])
+
+    def test_hand_geometry_comes_from_the_urdf(self):
+        self.assertAlmostEqual(self.hand["spacing"], 0.057, places=3)     # index / middle lines
+        self.assertAlmostEqual(self.hand["thumb"], 0.0, places=3)         # thumb closes midway between them
+
+    def test_scene_objects_are_never_centred_between_the_two_fingers(self):
+        for shape in ("cube", "cylinder", "triangle"):
+            s = self.sel(shape)
+            self.assertTrue(s["wedge_if_centred"], shape)                 # 45 mm on a 57 mm hand: would wedge
+            self.assertEqual(s["type"], "pinch", shape)
+            self.assertGreaterEqual(s["lateral"], 0.0085, shape)          # pinch finger on the flat face
+            self.assertAlmostEqual(s["lateral"], 0.015, places=4)         # = the sim-validated grasp point
+
+    def test_wide_object_gets_the_centred_three_finger_grasp(self):
+        s = self.sel("cube", 0.090)
+        self.assertEqual((s["type"], s["lateral"], s["wedge_if_centred"]), ("tripod", 0.0, False))
+
+    def test_no_width_in_the_wedge_band_is_ever_centred(self):
+        for w in np.arange(0.020, 0.100, 0.001):
+            s = self.sel("cylinder", float(w))
+            if s["wedge_if_centred"]:
+                self.assertEqual(s["type"], "pinch", w)
+                self.assertGreater(s["lateral"], 0.0, w)
+            if s["type"] == "pinch":   # other finger clear of the object, pinch finger line on the object
+                self.assertGreaterEqual(0.0285 + s["lateral"] - 0.009, w / 2 + 0.003 - 1e-9, w)
+                self.assertLessEqual(0.0285 - s["lateral"], w / 2 + 1e-9, w)
+
+    def test_planner_uses_the_selection_and_mid_height(self):
+        r = run_episode()
+        p = next(p for p in r["pol"].plans if p.ok)
+        self.assertEqual(p.grasp["type"], "pinch")
+        zc, H = r["env"].scene.counter_z, r["env"].scene.object_height(p.det.shape)
+        self.assertGreaterEqual(p.waypoints["grasp"][2], zc + 0.5 * H - 1e-6)       # mid-height or fingertip-limited
+        self.assertLess(p.waypoints["grasp"][2], zc + H - 0.008)                    # never above the object

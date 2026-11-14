@@ -37,6 +37,9 @@ class ClassicalServerPolicy(Policy):
         av = arm_vel or os.environ.get("AALTO_ARM_VEL")
         if av:
             ov["motion.arm_max_vel"] = float(av)
+        if os.environ.get("AALTO_CFG_OVERRIDES"):      # json {dotted.key: value}: config overrides for experiments
+            import json
+            ov.update(json.loads(os.environ["AALTO_CFG_OVERRIDES"]))
         self.pol = ClassicalPolicy(threaded=True, require_confirm=False, time_limit=tl, overrides=ov,
                                    log=lambda m: log.info(m), **kw)
         self.action_horizon = int(self.pol.cfg["motion"]["chunk"])

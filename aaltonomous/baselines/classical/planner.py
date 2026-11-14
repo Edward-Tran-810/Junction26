@@ -23,6 +23,7 @@ import numpy as np
 from aaltonomous.interface.safety import JointSpec, SafetyConfig, SafetyFilter
 from aaltonomous.interface.tasks import FIXED_MAPPING
 
+from . import grasp_select
 from .instruction import target_bin
 from .kinematics import ArmKinematics
 
@@ -116,6 +117,18 @@ class Planner:
         self.dt = dt
         self.height = float(cfg["perception"].get("object_height") or scene.object_height())
         self.mapping = mapping or dict(FIXED_MAPPING)  # sort_fixed: fixed colour -> bin position
+        gs = cfg["grasp"].get("select") or {}
+        self.select_cfg = gs if gs.get("enabled") else None
+        self.hand_geom = grasp_select.hand_geometry(self.kin, postures, gs.get("pad_width", 0.018)) if self.select_cfg else None
+
+    def select_grasp(self, det):
+        """Grasp type + lateral offset + height for this detection (grasp_select.py); None = configured point."""
+        if self.select_cfg is None:
+            return None
+        shape = getattr(det, "shape", None)
+        dims = self.scene.object_dims(shape) if shape else {"width": self.scene.size, "height": self.height,
+                                                            "fillet": float(self.scene.cfg["objects"]["fillet"])}
+        return grasp_select.select(shape, dims, self.hand_geom, self.select_cfg)
 
     # ------------------------------------------------------------------ geometry helpers
     def bin_xy(self, name):
@@ -420,13 +433,21 @@ class Planner:
     def _plan_side(self, det, side, bin_name, arm_q, hand_q, place_xy=None):
         """VARIANT `grasp.per_shape.<shape>` (needs det.shape): {point_in_palm, height_frac, preshape, closed (posture
         names in `hand`), close_hold_s, lift_vel} for that shape only."""
-        ps = (self.cfg["grasp"].get("per_shape") or {}).get(getattr(det, "shape", None)) or {}
+        ps = dict((self.cfg["grasp"].get("per_shape") or {}).get(getattr(det, "shape", None)) or {})
         saved = dict(self.kin.offset)
-        if ps.get("point_in_palm") is not None:
+        sel = self.select_grasp(det)
+        if ps.get("point_in_palm") is not None:            # explicit per-shape point wins over the selection
             p = np.asarray(ps["point_in_palm"], float)
             self.kin.offset = {"left": p, "right": p * np.array([1.0, -1.0, 1.0])}
+        elif sel is not None:                               # lateral (palm z) from the geometry, x / y as configured
+            p = np.asarray(saved["left"], float).copy()
+            p[2] = self.hand_geom["centre"] + self.hand_geom["pinch_sign"] * sel["lateral"]
+            self.kin.offset = {"left": p, "right": p * np.array([1.0, -1.0, 1.0])}
+            ps.setdefault("height_frac", sel["height_frac"])
         try:
-            return self._plan_side_impl(det, side, bin_name, arm_q, hand_q, place_xy, ps)
+            plan = self._plan_side_impl(det, side, bin_name, arm_q, hand_q, place_xy, ps)
+            plan.grasp = sel or {}
+            return plan
         finally:
             self.kin.offset = saved
 
@@ -435,7 +456,8 @@ class Planner:
         sc, zc = self.scene, self.scene.counter_z
         plan = Plan(False, side=side, color=det.color, target_bin=bin_name if place_xy is None else "counter")
         sl = ArmKinematics.sl(side)
-        H, post = self.height, self.post
+        shape = getattr(det, "shape", None)
+        H, post = (self.scene.object_height(shape) if shape else self.height), self.post   # this object's own height
         hand_pre = hand_q.copy(); hand_pre[sl] = post[ps.get("preshape", "preshape")][sl]
         hand_cls = hand_q.copy(); hand_cls[sl] = post[ps.get("closed", "closed")][sl]
         hand_open = hand_q.copy(); hand_open[sl] = post["open"][sl]
