@@ -5,6 +5,6 @@
 source "$(dirname "$0")/_common.sh"
 source "$ROOT/aaltonomous/demos/instance_d.env"
 SEED=${1:-2000}; MODE=${2:-classical}
-export SERVER_ENV="AALTO_LID_ROT_DEG=180"
+export SERVER_ENV="AALTO_LID_ROT_DEG=0"
 demo_run demo3_insert insert_shapes "$SEED" "$MODE" --n-objects 3 --min-spacing 0.10 --shapes cube,cylinder,triangle
-demo_finish demo3 "DEMO 3 - SHAPE INSERTION ($MODE + Perception v2)" "cube->square hole  cylinder->circle hole  triangle->triangle hole  (lid turned 180 deg)"
+demo_finish demo3 "DEMO 3 - SHAPE INSERTION ($MODE + Perception v2)" "cube->square hole  cylinder->circle hole  triangle->triangle hole"

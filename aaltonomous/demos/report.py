@@ -49,6 +49,9 @@ def main():
             if m and ("execute" in m.group(2) or "verify" in line or "re-look" in m.group(2) or "ABORT" in m.group(2)):
                 picks.append(m.group(2)[:150])
     res["policy_log"] = picks
+    if res["verdict"] == "FAIL" and not any("execute" in x for x in picks) and sl.exists():
+        skips = sorted({re.sub(r"^.*\]: ", "", l)[:90] for l in sl.read_text().splitlines() if "skip" in l and "[classical]" in l})
+        res["verdict"], res["why"] = "BLOCKED", "no executable plan for any object, the robot never moved: " + "; ".join(skips)
     (out / "result.json").write_text(json.dumps(res, indent=1, default=str))
     print(f"\n=== {a.title}: {res['verdict']}  ({res['why']})")
     mp4 = next(iter(sorted(run.glob("*.mp4"))), None)

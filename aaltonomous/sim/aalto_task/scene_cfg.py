@@ -238,7 +238,7 @@ def lid_cfg():
     return AssetBaseCfg(
         prim_path=f"{ENV}/Lid",
         init_state=AssetBaseCfg.InitialStateCfg(pos=_w(SC.mat_to_pelvis([cx, cy, SC.lid_z[0]])),
-                                                rot=(0.0, 0.0, 0.0, 1.0) if SC.lid_rotate_deg == 180 else (1.0, 0.0, 0.0, 0.0)),
+                                                rot=(0.0, 0.0, 1.0, 0.0) if SC.lid_rotate_deg == 180 else (0.0, 0.0, 0.0, 1.0)),   # quat xyzw
         spawn=StlMeshCfg(path=str(ASSETS / "lid_shapes.stl"), center_z=False, swap_xy=True, approximation="none",
                          collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True, contact_offset=0.002,
                                                                           rest_offset=0.0),
