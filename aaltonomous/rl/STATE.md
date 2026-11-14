@@ -86,7 +86,13 @@ for 60/60 cells), colour cycle (60/60 match).
 | r09_no_estimate | proprioception + script only | = r01 |
 (r02/r04 baselines were measured before the finger-material fix; wide mode was unaffected.)
 
-Training runs: none finished yet. Plan: 400 iterations (52 M steps) per run, evaluate at 200 and 400 in its own
+Training runs: **none yet.** Pilot (r01 x 2 seeds, ~25 iterations, ~6 GPU-min) collapsed to success 0 / lifted 0:
+per-tick exploration noise breaks the scripted grasp (measured, scripted + N(0, s) actions in r01's distribution:
+s=0.05 cube 379/531, cyl 68/511, tri 13/518; s=0.1: 28/531, 0/511, 1/518), so PPO only learned to avoid penalties.
+Fix implemented, **NOT yet tested**: residual = EMA of the actions (alpha 0.2, `action_ema`), actor sees the smoothed
+residual, action-rate penalty on its change; skill.py mirrors it. Next: re-run the noise check with the EMA, then
+init_noise_std ~0.1-0.3, gamma 0.995, counter penalty only for real contact (< 1 mm, w 0.05), then relaunch.
+Concurrency: 2 runs on GPU 1 = ~14.5k fps each vs 27k alone (+8 % total), so GPU-hours ~ env-steps / 27k. Plan: 400 iterations (52 M steps) per run, evaluate at 200 and 400 in its own
 distribution vs the scripted baseline (kill rule: two consecutive evaluations below it), survivors continue.
 
 ## Questions for the human

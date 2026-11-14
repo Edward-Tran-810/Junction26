@@ -4,7 +4,7 @@
 K=${1:-2}; JOBS=$2; IT=${3:-}
 cd "$(dirname "$0")/../.."
 source ~/miniforge3/etc/profile.d/conda.sh && conda activate isaac
-export PYTHONPATH=$PWD OMNI_KIT_ACCEPT_EULA=YES CUDA_VISIBLE_DEVICES=1
+export PYTHONPATH=$PWD OMNI_KIT_ACCEPT_EULA=YES CUDA_VISIBLE_DEVICES=1 PYTHONUNBUFFERED=1
 mkdir -p runs/rl
 while read -r run seed; do
   [ -z "$run" ] && continue

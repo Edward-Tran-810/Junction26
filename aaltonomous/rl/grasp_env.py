@@ -101,6 +101,9 @@ class GraspEnvCfg(DirectRLEnvCfg):
     action_space_name: str = "full"        # hand | hand_wrist | full
     residual_arm: float = 0.12             # rad, max |offset| per arm joint
     residual_hand: float = 0.5             # rad, max |offset| per finger joint
+    # residual = EMA of the actions (low-pass): per-tick white exploration noise vibrates the kp-100 fingers and
+    # drops the scripted grasp (scripted + N(0, 0.05) actions: cylinder 68/511 vs ~88 % without noise)
+    action_ema: float = 0.2
     # ---- object estimate (actor) vs truth
     use_estimate: bool = True              # False = proprioception-only actor
     est_pos_noise: float = 0.005           # m, uniform +- (truth = estimate + noise)
@@ -199,6 +202,8 @@ class GraspEnv(DirectRLEnv):
         self.target = z(N, 28)
         self.actions = z(N, cfg.action_space)
         self.prev_actions = z(N, cfg.action_space)
+        self.res_a = z(N, cfg.action_space)            # smoothed residual in action units [-1, 1]
+        self.prev_res_a = z(N, cfg.action_space)
         self.rest_z = z(N)
         self.held_hold = torch.ones(N, dtype=torch.bool, device=dev)
         self.violated = torch.zeros(N, dtype=torch.bool, device=dev)
@@ -282,7 +287,9 @@ class GraspEnv(DirectRLEnv):
         self.prev_actions[:] = self.actions
         self.actions[:] = torch.clamp(actions, -1.0, 1.0)
         res = torch.zeros(self.num_envs, 14, device=self.device)
-        res[:, self.act_dims] = self.actions * self.act_scale
+        self.prev_res_a[:] = self.res_a
+        self.res_a.mul_(1.0 - self.cfg.action_ema).add_(self.cfg.action_ema * self.actions)
+        res[:, self.act_dims] = self.res_a * self.act_scale
         desired = self._script(self.t)
         desired[:, 0:7] += res[:, 0:7]
         desired[:, 14:21] += res[:, 7:14]
@@ -354,7 +361,7 @@ class GraspEnv(DirectRLEnv):
                                       torch.sin(4 * yaw), torch.cos(4 * yaw)], 1)], 1)
         if not c.use_estimate:
             est = torch.zeros_like(est)
-        actor = torch.cat([arm_q, arm_dq, hand_q, scr14, ph_oh, prog, self.actions, est], 1)
+        actor = torch.cat([arm_q, arm_dq, hand_q, scr14, ph_oh, prog, self.res_a, est], 1)
         # critic: noise-free proprio + true state
         pos, quat, vel = self._obj_state()
         grasp, tips, palm, wrist = self._hand_geom()
@@ -403,7 +410,7 @@ class GraspEnv(DirectRLEnv):
         ph = self._phase()
         r = c.w_success * self.success.float()
         r += c.w_lift * torch.clamp(self._rise / LIFT_M, 0.0, 1.0) * (ph >= 1).float()
-        r -= c.w_action_rate * ((self.actions - self.prev_actions) ** 2).sum(1)
+        r -= c.w_action_rate * ((self.res_a - self.prev_res_a) ** 2).sum(1) / self.cfg.action_ema ** 2
         r -= c.w_counter * self._near_counter.float()
         r -= c.w_violation * self.violated.float() * (self.t >= self.lib["length"][self.entry]).float()
         self.extras.setdefault("log", {})
@@ -475,6 +482,8 @@ class GraspEnv(DirectRLEnv):
         self.t[env_ids] = 0
         self.actions[env_ids] = 0
         self.prev_actions[env_ids] = 0
+        self.res_a[env_ids] = 0
+        self.prev_res_a[env_ids] = 0
         self.held_hold[env_ids] = True
         self.violated[env_ids] = False
         self.lifted_any[env_ids] = False

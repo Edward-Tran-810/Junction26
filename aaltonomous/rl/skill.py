@@ -53,6 +53,7 @@ class GraspSkill:
         self.dims = np.array(ACTION_DIMS[e.get("action_space_name", "full")])
         self.scale = np.r_[[e.get("residual_arm", 0.12)] * 7, [e.get("residual_hand", 0.5)] * 7][self.dims]
         self.use_est = bool(e.get("use_estimate", True))
+        self.ema = float(e.get("action_ema", 0.2))
         self.active = False
         self.times = []                     # per-tick inference wall time (s)
 
@@ -124,8 +125,8 @@ class GraspSkill:
                 act = self.net(self.torch.from_numpy(x)[None])[0].numpy()
             self.times.append(time.perf_counter() - t0)
             act = np.clip(act, -1, 1)
-            self.last_a = act
-            res[self.dims] = act * self.scale
+            self.last_a = (1 - self.ema) * self.last_a + self.ema * act      # = env res_a (obs + residual)
+            res[self.dims] = self.last_a * self.scale
             ra, rh = self._from_left(res[:7], res[7:])
             off = np.zeros(28); off[sa] = ra; off[14:][sa] = rh
             self.offset = off

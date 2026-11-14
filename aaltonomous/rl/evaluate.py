@@ -183,6 +183,7 @@ def main(argv=None):
     ap.add_argument("--limit", type=int, default=None, help="evaluate every k-th case so that at most this many run")
     ap.add_argument("--out", default=None)
     ap.add_argument("--bench", default=None)
+    ap.add_argument("--act-noise", type=float, default=0.0, help="scripted + N(0, s) actions (exploration check)")
     ap.add_argument("--lib", default=None, help="library npz (default lib_left.npz)")
     ap.add_argument("--device", default="cuda:0", help="cuda:0 or cpu (the DDS eval sim runs PhysX on CPU)")
     a = ap.parse_args(argv)
@@ -201,6 +202,9 @@ def main(argv=None):
         ov["lib_path"] = a.lib
     env, ctx = launch(a.num_envs, ov, a.device)
     pol = None if a.policy == "scripted" else load_policy(a.policy, env, run)
+    if pol is None and a.act_noise > 0:
+        import torch
+        pol = lambda obs, _s=a.act_noise: _s * torch.randn(env.num_envs, env.cfg.action_space, device=env.device)
     cases = library_cases(env, a.repeats, NOISE.get(a.noise, {}) if a.noise != "run" else
                           {k: ov[k] for k in ("est_pos_noise", "est_yaw_noise_deg", "est_wrong_shape_p") if k in ov},
                           seed=a.seed)
