@@ -40,6 +40,8 @@ class Plan:
     hand: np.ndarray | None = None                     # (T, 14)
     phases: list = field(default_factory=list)         # (name, start tick, end tick)
     safety_clips: int | None = None
+    det: object = None                                 # the Detection this plan was made for (set by the policy)
+    grasp: dict = field(default_factory=dict)          # grasp_select.select() result used for this plan
 
     @property
     def duration(self):
@@ -95,6 +97,15 @@ def ramp(a, b, vmax, dt):
     return a + (b - a) * (np.arange(1, n + 1) / n)[:, None]
 
 
+def _tri_shift(phi, dims=None, r=0.030):
+    """Midpoint (m, along f) of an equilateral triangle's extent in direction f, f at angle phi from the apex direction;
+    vertices at r from the centroid (altitude 45 mm: apex 30 mm, faces 15 mm). phi=0 -> +7.5 mm (towards the apex)."""
+    if dims is not None and "circumradius" in dims:
+        r = float(dims["circumradius"])
+    v = np.radians([0.0, 120.0, 240.0])
+    return 0.5 * (r * np.cos(phi - v).max() - r * np.cos(phi + np.pi - v).max())
+
+
 class Planner:
     def __init__(self, cfg, scene, postures, home, kin: ArmKinematics | None = None, safety: SafetyConfig | None = None,
                  spec: JointSpec | None = None, mapping=None, dt=1.0 / 30.0):
@@ -112,7 +123,17 @@ class Planner:
 
     def drop_xy(self, name):
         """Release point (pelvis xy) in bin `name`: the point of the inner footprint nearest the pelvis, `grasp.drop_inset`
-        inside the inner walls (the published box row puts the box centres past the arm's reach). None -> centre."""
+        inside the inner walls (the published box row puts the box centres past the arm's reach). None -> centre.
+        VARIANT `grasp.drop_spread` (list of [dx, dy], off = null): offset cycled by self.drop_count[name] (objects already
+        released into that bin), so a second object doesn't land on the first and poke above the rim."""
+        xy = self._drop_xy(name)
+        spread = self.cfg["grasp"].get("drop_spread")
+        if spread:
+            k = getattr(self, "drop_count", {}).get(name, 0)
+            xy = xy + np.asarray(spread[k % len(spread)], float)
+        return xy
+
+    def _drop_xy(self, name):
         inset = self.cfg["grasp"].get("drop_inset")
         c = self.bin_xy(name)
         if inset is None:
@@ -163,6 +184,36 @@ class Planner:
         return q, ok
 
     def _cartesian(self, side, p0, p1, q0, name, plan):
+        """IK waypoints along p0 -> p1 (see _cartesian_line). VARIANTS (motion section, off by default):
+        `carry_joint_first`: the carry is a joint-space move (direct / raised midpoint) first, Cartesian as fallback;
+        `shortcut_tol` (m): a Cartesian segment becomes ONE joint-space move when the grasp point stays this close to the
+        straight line (per-waypoint IK lets the wrist wander: longer joint paths = slower at the same joint speed cap).
+        Clearance + safety checks run on the final trajectory either way (oracle.py's _OraclePlanner, ported)."""
+        mo = self.cfg["motion"]
+        if name == "carry" and mo.get("carry_joint_first"):
+            wall = float(self.scene.cfg["bins"]["wall_height"])
+            z_min = self.scene.counter_z + wall + self.height / 2 + self.cfg["grasp"]["drop_above_rim"]
+            reason = plan.reason
+            out = self._joint_carry(side, q0, p0, p1, z_min, "carry", plan)
+            if out is not None:
+                return out
+            plan.reason = reason
+        qs = self._cartesian_line(side, p0, p1, q0, name, plan)
+        tol = mo.get("shortcut_tol")
+        if not tol or not qs or len(qs) < 2:
+            return qs
+        q0, q1 = np.asarray(q0, float), qs[-1]
+        p0, p1 = np.asarray(p0, float), np.asarray(p1, float)
+        d = p1 - p0
+        L2 = float(d @ d)
+        for f in np.linspace(0, 1, 12)[1:-1]:
+            p = self.kin.grasp_pose(side, q0 + f * (q1 - q0))[0]
+            t = np.clip((p - p0) @ d / L2, 0, 1) if L2 > 0 else 0.0
+            if np.linalg.norm(p - (p0 + t * d)) > tol:
+                return qs
+        return [q1]
+
+    def _cartesian_line(self, side, p0, p1, q0, name, plan):
         """IK waypoints along the straight line p0 -> p1 (excluding p0), seeded continuously. A step whose joints
         jump more than `max_joint_step` is bisected (up to 3 times) before it counts as a failure."""
         n = max(1, int(np.ceil(np.linalg.norm(np.subtract(p1, p0)) / self.cfg["motion"]["cart_step"])))
@@ -293,8 +344,66 @@ class Planner:
         return last
     def _plan_side_hints(self, det, side, bin_name, arm_q, hand_q, **kw):
         """_plan_side with each finger direction of grasp.finger_hints in turn (fingers forward can reach over the
-        centre bin's wall when the object is close to it; then fingers inward/sideways)."""
+        centre bin's wall when the object is close to it; then fingers inward/sideways). VARIANT `grasp.face_align`
+        (needs det.shape + det.yaw): face-aligned directions first, the hints as the fallback."""
+        fa = self.cfg["grasp"].get("face_align") or {}
+        if fa.get("enabled") and getattr(det, "shape", None) in (fa.get("shapes") or {}) and getattr(det, "yaw", None) is not None:
+            p = self._plan_side_facealign(det, side, bin_name, arm_q, hand_q, fa, **kw)
+            if p is not None:
+                return p
+        return self._plan_side_finger_hints(det, side, bin_name, arm_q, hand_q, **kw)
+
+    def _plan_side_facealign(self, det, side, bin_name, arm_q, hand_q, fa, **kw):
+        """Fingers along a direction fixed to the object's faces (oracle.py's face-aligned grasp, generalised):
+        f = yaw + offset + k * 360/n deg, n = rotational symmetry (cube 4, triangle 3). Offsets in the scene/export.py
+        mesh frame: cube faces at 0/90/..; triangle apex along +y, so offset 90 + phi = fingers phi deg from the apex
+        direction (phi 0: fingers straddle the apex = the two fingers on the two faces meeting there, thumb on the
+        opposite flat face: three faces; phi 180: thumb on the apex, fingers on one face). Candidates nearest the side's
+        natural finger direction first; the achieved direction must be within tol_deg. None = no face plan."""
+        import copy
+        shape, yaw = det.shape, float(det.yaw)
+        sh = fa["shapes"][shape]
+        off, n = np.radians(float(sh.get("offset_deg", 0.0))), int(sh.get("n", 4))
+        ref = np.radians(float((fa.get("finger_ref_deg") or {"left": -25.0, "right": 25.0})[side]))
+        max_dev, tol = np.radians(float(fa.get("max_dev_deg", 75.0))), float(fa.get("tol_deg", 12.0))
+        cands = []
+        for k in range(n):
+            a = yaw + off + 2 * np.pi * k / n
+            da = abs((a - ref + np.pi) % (2 * np.pi) - np.pi)
+            if da <= max_dev:
+                cands.append((da, a))
+        saved = (self.kin.hint, self.kin.w_hint)
+        try:
+            for _, a in sorted(cands):
+                f = np.array([np.cos(a), np.sin(a), 0.0])
+                d2 = copy.copy(det)
+                if shape == "triangle" and sh.get("support_shift", True):   # pinch midpoint along f != centroid
+                    d2.top = det.top + _tri_shift(a - (yaw + np.pi / 2), self.scene.object_dims("triangle")) * f
+                self.kin.hint, self.kin.w_hint = f, float(fa.get("hint_weight", 3.0))
+                p = self._plan_side(d2, side, bin_name, arm_q, hand_q, **kw)
+                if p.ok:
+                    err = self._finger_err(p, side, f)
+                    if err <= tol:
+                        p.reason = f"face-aligned ({np.degrees(a):.0f} deg, err {err:.0f})"
+                        return p
+        finally:
+            self.kin.hint, self.kin.w_hint = saved
+        return None
+
+    def _finger_err(self, plan, side, f):
+        """Angle (deg) between the palm x axis (finger direction) at the grasp and f, in the horizontal plane."""
+        e = next(e for name, s, e in plan.phases if name == "descend")
+        self.kin._fk(plan.arm[e - 1])
+        x = self.kin.data.oMf[self.kin.palm[side]].rotation[:, 0]
+        a = np.arctan2(x[1], x[0]) - np.arctan2(f[1], f[0])
+        return float(np.degrees(abs((a + np.pi) % (2 * np.pi) - np.pi)))
+
+    def _plan_side_finger_hints(self, det, side, bin_name, arm_q, hand_q, **kw):
         hints = self.cfg["grasp"].get("finger_hints") or [self.cfg["grasp"].get("finger_hint", [1.0, 0.0, 0.0])]
+        # Retry of the same object (policy sets hint_shift = earlier attempts at this spot): start with the next
+        # finger direction, so a retry is not the identical grasp that just failed (`grasp.retry_rotate_hints`).
+        shift = int(getattr(self, "hint_shift", 0)) % len(hints) if self.cfg["grasp"].get("retry_rotate_hints") else 0
+        hints = list(hints[shift:]) + list(hints[:shift])
         saved, first = self.kin.hint, None
         try:
             for h in hints:
@@ -309,19 +418,32 @@ class Planner:
             self.kin.hint = saved
 
     def _plan_side(self, det, side, bin_name, arm_q, hand_q, place_xy=None):
+        """VARIANT `grasp.per_shape.<shape>` (needs det.shape): {point_in_palm, height_frac, preshape, closed (posture
+        names in `hand`), close_hold_s, lift_vel} for that shape only."""
+        ps = (self.cfg["grasp"].get("per_shape") or {}).get(getattr(det, "shape", None)) or {}
+        saved = dict(self.kin.offset)
+        if ps.get("point_in_palm") is not None:
+            p = np.asarray(ps["point_in_palm"], float)
+            self.kin.offset = {"left": p, "right": p * np.array([1.0, -1.0, 1.0])}
+        try:
+            return self._plan_side_impl(det, side, bin_name, arm_q, hand_q, place_xy, ps)
+        finally:
+            self.kin.offset = saved
+
+    def _plan_side_impl(self, det, side, bin_name, arm_q, hand_q, place_xy, ps):
         cfg, g, mo = self.cfg, self.cfg["grasp"], self.cfg["motion"]
         sc, zc = self.scene, self.scene.counter_z
         plan = Plan(False, side=side, color=det.color, target_bin=bin_name if place_xy is None else "counter")
         sl = ArmKinematics.sl(side)
         H, post = self.height, self.post
-        hand_pre = hand_q.copy(); hand_pre[sl] = post["preshape"][sl]
-        hand_cls = hand_q.copy(); hand_cls[sl] = post["closed"][sl]
+        hand_pre = hand_q.copy(); hand_pre[sl] = post[ps.get("preshape", "preshape")][sl]
+        hand_cls = hand_q.copy(); hand_cls[sl] = post[ps.get("closed", "closed")][sl]
         hand_open = hand_q.copy(); hand_open[sl] = post["open"][sl]
         hand_rel = hand_q.copy(); hand_rel[sl] = post[g.get("release_posture", "preshape")][sl]
 
         # grasp height: object mid-height, raised until the preshaped fingers clear the counter
         xy = det.top[:2] + np.asarray((g.get("arm_xy_offset") or {}).get(side, [0.0, 0.0]), float)  # per-arm, TUNE
-        z = zc + g["height_frac"] * H
+        z = zc + float(ps.get("height_frac", g["height_frac"])) * H
         for _ in range(4):
             qg, ok = self._ik(side, np.r_[xy, z], arm_q, "grasp", plan)
             if not ok:
@@ -368,9 +490,9 @@ class Planner:
         arm_parts, hand_parts, phases = [], [], []
         cur_a, cur_h = arm_q.copy(), hand_q.copy()
 
-        def move(name, Qs, hand_to=None):
+        def move(name, Qs, hand_to=None, v=None):
             nonlocal cur_a, cur_h
-            a = time_scale([cur_a] + list(Qs), vmax, amax, self.dt)
+            a = time_scale([cur_a] + list(Qs), v or vmax, amax, self.dt)
             h = np.repeat(cur_h[None], len(a), 0)
             if hand_to is not None:  # hand moves during the arm move (ends no later than the arm)
                 hr = ramp(cur_h, hand_to, hv, self.dt)
@@ -399,8 +521,8 @@ class Planner:
 
         move("to_pregrasp", [q_pre], hand_to=hand_pre)
         move("descend", down)
-        hand("close", hand_cls, mo["close_hold_s"])
-        move("lift", up)
+        hand("close", hand_cls, float(ps.get("close_hold_s", mo["close_hold_s"])))
+        move("lift", up, v=ps.get("lift_vel", mo.get("lift_vel")))   # VARIANT (per_shape.)lift_vel, null = arm_max_vel
         move("carry", carry + lower)
         hand("open", hand_rel, mo["open_hold_s"])  # widest posture: `open` alone left the cube wedged in the sim
         move("retreat", retreat)

@@ -175,8 +175,21 @@ class RenderMockBackend(MockBackend):
     name = "mock"
 
     def __init__(self, scene, cal, kin, postures, attach_radius=0.04, depth_noise_mm=1.0, hole_frac=0.02, seed=0,
-                 **kw):
+                 contact_err=0.02, faults=None, **kw):
+        """contact_err (rad): finger tracking error reported while an object is between the fingers (a position-
+        controlled finger stops on the object, short of the commanded posture; the Isaac sim shows 0.02-0.07 rad per
+        loaded joint). 0 = the old ideal fingers (the policy's grasp verification then sees an empty hand).
+        faults: {"miss": [...], "drop": [...], "stuck": [...]} = indices of the closing events (0 = the first time a
+        hand closes in the episode) at which the grasp misses, the object falls out during the carry, or the object
+        stays wedged in the opened hand until the fingers scissor (the four failure modes seen in Isaac)."""
         super().__init__(**kw)
+        self.contact_err = float(contact_err)
+        self.faults = {k: set(v) for k, v in (faults or {}).items()}
+        self.n_close = 0                        # closing events so far
+        self._closed = {"left": False, "right": False}
+        self._fault = {"left": None, "right": None}   # fault of the current grasp of that hand
+        self.stuck = {"left": False, "right": False}
+        self.fault_log = []                     # (closing event index, fault, what happened)
         self.scene, self.kin, self.post = scene, kin, postures
         self.renderer = Renderer(scene, cal)
         self.attach_radius = attach_radius
@@ -184,6 +197,7 @@ class RenderMockBackend(MockBackend):
         self.rng = np.random.default_rng(seed)
         self.objects, self.held = [], {"left": None, "right": None}
         self._cache = None
+        self._n, self._g0 = {"left": -1, "right": -1}, {"left": np.zeros(3), "right": np.zeros(3)}
 
     def reset_scene(self, layout, instruction):
         super().reset_scene(layout, instruction)
@@ -193,6 +207,32 @@ class RenderMockBackend(MockBackend):
                          "pos": sc.mat_to_pelvis(sc.cube_spawn_mat(c))} for c in layout]
         self.held = {"left": None, "right": None}
         self._cache = None
+        self.n_close = 0
+        self._closed = {"left": False, "right": False}
+        self._fault = {"left": None, "right": None}
+        self.stuck = {"left": False, "right": False}
+        self.fault_log = []
+
+    def joints(self):
+        """Measured joints: a hand with an object in it does not reach its commanded posture (contact_err)."""
+        arm_q, arm_dq, hand_q = super().joints()
+        for side in ("left", "right"):
+            if self.held[side] is None or not self.contact_err:
+                continue
+            sl = slice(0, 7) if side == "left" else slice(7, 14)
+            o, c = self.post["open"][sl], self.post["closed"][sl]
+            back = np.sign(o - c)                # towards open
+            if self.stuck[side]:                 # opened hand, object hooked between the two long fingers
+                hand_q[sl][3:] -= self.contact_err * np.array([1.0, 0.5, -1.0, -0.5]) * np.sign(c - o)[3:]
+            else:                                # closed on the object: thumb 1, 2 and the four finger joints stall
+                hand_q[sl][1:] += self.contact_err * back[1:]
+        return arm_q, arm_dq, hand_q
+
+    def _scissor(self, side):
+        """True when one long finger is curled and the other straight (the release-recovery motion)."""
+        sl = slice(0, 7) if side == "left" else slice(7, 14)
+        h = self.hand_q[sl]
+        return abs(abs(h[3]) - abs(h[5])) > 0.5
 
     def _closure(self, side):
         sl = slice(0, 7) if side == "left" else slice(7, 14)
@@ -205,16 +245,41 @@ class RenderMockBackend(MockBackend):
             g, _ = self.kin.grasp_pose(side, self.arm_q)
             f = self._closure(side)
             h = self.held[side]
+            if f > 0.6 and not self._closed[side]:      # a closing event
+                self._closed[side] = True
+                n, self.n_close = self.n_close, self.n_close + 1
+                self._fault[side] = next((k for k in ("miss", "drop", "stuck") if n in self.faults.get(k, ())), None)
+                self._n[side] = n
+            elif f < 0.3:
+                self._closed[side] = False
             if h is None and f > 0.6:
-                free = [i for i, ob in enumerate(self.objects) if i not in self.held.values()]
-                if free:
+                held_ids = [x[0] for x in self.held.values() if x is not None]
+                free = [i for i, ob in enumerate(self.objects) if i not in held_ids]
+                if free and self._fault[side] not in ("miss", "missed"):
                     i = min(free, key=lambda i: np.linalg.norm(self.objects[i]["pos"] - g))
                     if np.linalg.norm(self.objects[i]["pos"] - g) < self.attach_radius:
                         self.held[side] = (i, self.objects[i]["pos"] - g)
+                        self._g0[side] = g.copy()
+                elif self._fault[side] == "miss":
+                    self.fault_log.append((self._n[side], "miss", "grasp closed on nothing"))
+                    self._fault[side] = "missed"
             elif h is not None:
                 i, off = h
                 self.objects[i]["pos"] = g + off
-                if f < 0.3:
+                if self._fault[side] == "drop" and np.linalg.norm(g[:2] - self._g0[side][:2]) > 0.06:
+                    self._drop(self.objects[i])                    # falls out during the carry
+                    self.held[side] = None
+                    self.fault_log.append((self._n[side], "drop", "object fell during the carry"))
+                    self._fault[side] = "dropped"
+                elif f < 0.3:
+                    if self._fault[side] == "stuck" and not self.stuck[side]:
+                        self.stuck[side] = True                    # stays wedged in the opened hand ...
+                        self.fault_log.append((self._n[side], "stuck", "object wedged after the release"))
+                    if self.stuck[side] and not self._scissor(side):
+                        continue
+                    if self.stuck[side]:                           # ... until the fingers scissor
+                        self.fault_log.append((self._n[side], "stuck", "freed by the scissor"))
+                        self.stuck[side], self._fault[side] = False, "freed"
                     self._drop(self.objects[i])
                     self.held[side] = None
 

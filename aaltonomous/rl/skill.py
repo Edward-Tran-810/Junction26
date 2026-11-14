@@ -64,6 +64,18 @@ class GraspSkill:
         self.scale = np.r_[[e.get("residual_arm", 0.12)] * 7, [e.get("residual_hand", 0.5)] * 7][self.dims]
         self.use_est = bool(e.get("use_estimate", True))
         self.ema = float(e.get("action_ema", 0.2))
+        # Deployment envelope (integration, 2026-11-14). The actor was trained on lift + hold + shake only: no carry,
+        # no release. Defaults keep its trained behaviour inside the grasp window; the options bound what it may do
+        # to the plan around it. cfg["limits"] or $AALTO_RL_LIMITS (json):
+        #   fade_ticks  arm residual is ramped to 0 over this many ticks after the lift (was: removed in one tick,
+        #               a step of up to residual_arm rad into the carry, rate-limited only by the velocity cap)
+        #   hand_gain   scale on the 7 hand residuals (1 = as trained)
+        #   thumb0_max  |thumb_0 residual| limit, rad (thumb_0 swings the thumb sideways, towards the gap between
+        #               index and middle: with it the object is pushed into that gap and wedges, see STATE)
+        lim = dict(cfg.get("limits") or json.loads(os.environ.get("AALTO_RL_LIMITS", "{}") or "{}"))
+        self.fade = max(1, int(lim.get("fade_ticks", 15)))
+        self.hand_gain = float(lim.get("hand_gain", 1.0))
+        self.thumb0_max = lim.get("thumb0_max")
         self.active = False
         self.times = []                     # per-tick inference wall time (s)
 
@@ -144,11 +156,15 @@ class GraspSkill:
             act = np.clip(act, -1, 1)
             self.last_a = (1 - self.ema) * self.last_a + self.ema * act      # = env res_a (obs + residual)
             res[self.dims] = self.last_a * self.scale
+            res[7:] *= self.hand_gain
+            if self.thumb0_max is not None:
+                res[7] = float(np.clip(res[7], -float(self.thumb0_max), float(self.thumb0_max)))
             ra, rh = self._from_left(res[:7], res[7:])
             off = np.zeros(28); off[sa] = ra; off[14:][sa] = rh
             self.offset = off
         else:                                                   # after lift: arm residual -> 0; hand until `open`
-            self.offset[:14] = 0.0
+            left = self.fade - (k - self.e_lift)                # linear ramp over `fade` ticks, no step into the carry
+            self.offset[:14] *= (1.0 - 1.0 / left) if left > 1 else 0.0
             if k >= self.e_open:
                 self.offset[14:] = 0.0
         desired = np.r_[a_s, h_s] + self.offset

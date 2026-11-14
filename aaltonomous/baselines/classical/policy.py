@@ -30,9 +30,10 @@ from aaltonomous.scene.scene import Scene
 
 from .config import hand_postures, home_arm, load_config
 from .instruction import mapping_for_task, target_bin
+from .grasp_monitor import GraspMonitor, side_slice
 from .kinematics import ArmKinematics
 from .perception import Perception
-from .planner import Planner
+from .planner import Planner, ramp, time_scale
 
 HZ = 30.0
 
@@ -58,6 +59,7 @@ class ClassicalPolicy:
         self.safety = safety or SafetyConfig(dt=1.0 / HZ)
         self.perception = Perception(self.cfg, self.scene, self.cal)
         self.planner = Planner(self.cfg, self.scene, self.post, self.home, self.kin, self.safety, self.spec)
+        self.monitor = GraspMonitor(self.cfg)       # closed-loop grasp / transit / release checks (config `verify`)
         # Optional RL grasp residual (aaltonomous/rl/skill.py). OFF unless cfg["rl_grasp"] or $AALTO_RL_GRASP
         # names an exported actor; with it off nothing below changes.
         rl = self.cfg.get("rl_grasp") or os.environ.get("AALTO_RL_GRASP")
@@ -88,6 +90,12 @@ class ClassicalPolicy:
         else:
             self.mapping = dict(FIXED_MAPPING)
         self.planner.mapping = self.mapping
+        self.planner.drop_count = {}  # objects released per bin this episode (planner grasp.drop_spread variant)
+        self.planner.hint_shift = 0
+        if getattr(self, "monitor", None) is not None:      # (absent on objects built without __init__: tests)
+            self.monitor.reset()
+        self._exec = None           # closed-loop execution context of the current pick (None = plain queue)
+        self.grasp_log = []         # one record per executed pick: grasp / transit / release verdicts + recoveries
         self.time_limit = info.get("time_limit", self.time_limit)
         self.state = "init"
         self.queue_a = self.queue_h = None
@@ -117,6 +125,11 @@ class ClassicalPolicy:
         self._decision = "stop"
 
     def act(self, obs):
+        out = self._act(obs)
+        self.monitor.track(out["hand_q_target"])   # every emitted hand target (the monitor needs its history)
+        return out
+
+    def _act(self, obs):
         if self.arm_cmd is None:  # first call: start from the measured pose
             # Clamp into the URDF limits: real Dex3 fingers at rest read slightly past 0 (2026-11-11), and holding
             # that measured pose would be clipped every tick -> safety abort before the first move.
@@ -125,9 +138,12 @@ class ClassicalPolicy:
             self.hand_cmd = np.clip(np.asarray(obs["hand_q"], float), sp.hand_lower, sp.hand_upper)
         t = float(obs.get("t", 0.0))
         if self.queue_a is not None and len(self.queue_a):
+            if self._exec is not None:
+                return self._step_exec(obs, t)
             if self.skill is not None and self.skill.active:
                 return self.skill.act(self, obs)
             return self._pop()
+        self._exec = None
         if self.state == "init":
             a, h = self.planner.go_to(self.arm_cmd, self.hand_cmd, self.home, self.post["open"])
             self._home_move = (a, h)
@@ -187,7 +203,7 @@ class ClassicalPolicy:
             return self._hold(done=self.state == "done")
         if self.state == "executing":  # queue drained -> back home: look again after settling
             self.state = "settle"
-            return self.act(obs)
+            return self._act(obs)
         return self._hold(done=True)
 
     # ------------------------------------------------------------------ look + plan
@@ -220,6 +236,8 @@ class ClassicalPolicy:
             out = "left_counter"
         self.place_checks.append({"color": col, "shape": shape, "bin": bin_name, "xy": [float(v) for v in xy],
                                   "outcome": out})
+        if self.grasp_log and self.grasp_log[-1]["relook"] is None:
+            self.grasp_log[-1]["relook"] = out   # camera cross-check of the finger-load verdicts
         return out
 
     def _look(self, obs):
@@ -247,7 +265,10 @@ class ClassicalPolicy:
         cands.sort(key=key)
         for d in cands:
             others = [o.top[:2] for o in dets if o is not d]
+            r = self.cfg["policy"]["same_object_radius"]
+            self.planner.hint_shift = sum(c for q, c in self.attempts if np.linalg.norm(d.top[:2] - q) < r)
             p = self.planner.plan(d, self.arm_cmd, self.hand_cmd, obstacles=others)
+            p.det = d
             self.plans.append(p)
             if p.ok:
                 return ("plan", p, len(dets))
@@ -283,9 +304,12 @@ class ClassicalPolicy:
         det = getattr(plan, "det", None)
         self._last_place = (np.asarray(xy, float), plan.color, getattr(det, "shape", None), plan.target_bin,
                             list(self.last_detections))
+        if plan.target_bin in self.scene.bin_names:
+            self.planner.drop_count[plan.target_bin] = self.planner.drop_count.get(plan.target_bin, 0) + 1
         self._enqueue(plan.arm, plan.hand)
         if self.skill is not None:
             self.skill.begin(plan, self)
+        self._begin_exec(plan)
         self.state = "executing"
         self._note(t, f"execute {plan.summary()}")
         return self._pop()
@@ -294,8 +318,8 @@ class ClassicalPolicy:
     def _enqueue(self, a, h):
         self.queue_a, self.queue_h = np.asarray(a, float), np.asarray(h, float)
 
-    def _pop(self):
-        k = int(self.cfg["motion"]["chunk"])
+    def _pop(self, k=None):
+        k = int(self.cfg["motion"]["chunk"]) if k is None else max(1, int(k))
         a, h = self.queue_a[:k], self.queue_h[:k]
         self.queue_a, self.queue_h = self.queue_a[k:], self.queue_h[k:]
         if not len(a):
@@ -310,6 +334,197 @@ class ClassicalPolicy:
         k = 1 if done else max(1, int(self.cfg["motion"].get("hold_ticks", 1)))
         return {"arm_q_target": np.repeat(self.arm_cmd[None], k, 0), "hand_q_target": np.repeat(self.hand_cmd[None], k, 0),
                 "done": bool(done)}
+
+    def _hold_n(self, n):
+        """n ticks of the current target (a pause inside a plan; unlike _hold it is never a `done`)."""
+        return {"arm_q_target": np.repeat(self.arm_cmd[None], n, 0), "hand_q_target": np.repeat(self.hand_cmd[None], n, 0),
+                "done": False}
+
+    # ------------------------------------------------------------------ closed-loop execution (config `verify`)
+    # A plan is still computed as one validated trajectory, but it is no longer played blind:
+    #   close -> lift -> VERIFY (pause at the top of the lift until the finger-load monitor says held / empty)
+    #         -> carry, MONITORED every `verify.chunk` ticks (object lost = stop, never an empty-handed drop-off)
+    #         -> release -> RELEASE CHECK in the `open` posture above the bin (+ recovery if the object is still
+    #            hooked in the fingers) -> retreat -> home -> camera re-look (_check_last_place) as the second,
+    #            independent check of what really happened.
+    # Every recovery path is made of ticks of the validated plan played backwards (plus short joint moves) and is
+    # dry-run through the safety filter before it is used.
+    def _begin_exec(self, plan):
+        ph = {n: (s, e) for n, s, e in plan.phases}
+        self._exec = None
+        if not self.monitor.enabled or not all(k in ph for k in ("to_pregrasp", "descend", "close", "lift", "open")):
+            return
+        det = getattr(plan, "det", None)
+        rec = {"color": plan.color, "shape": getattr(det, "shape", None), "side": plan.side, "bin": plan.target_bin,
+               "grasp": None, "transit": None, "release": None, "recoveries": 0, "relook": None}
+        self.grasp_log.append(rec)
+        self._exec = {"plan": plan, "side": plan.side, "ph": ph, "stage": "grasp", "ins_a": None, "ins_h": None,
+                      "arm0": self.arm_cmd.copy(), "waited": 0, "recover": 0, "rec": rec}
+        self.monitor.restart()
+
+    def _vlog(self, t, msg):
+        self.events.append((round(t, 2), "verify: " + msg))
+        self.log(f"[verify t={t:6.2f}] {msg}")
+
+    def _insert(self, hand_targets, holds):
+        """Queue hand-only moves (arm fixed) ahead of the rest of the plan: ramp to each posture, then hold it."""
+        ex, hv = self._exec, self.cfg["motion"]["hand_max_vel"]
+        cur, rows = self.hand_cmd.copy(), []
+        for to, hold_s in zip(hand_targets, holds):
+            r = ramp(cur, to, hv, 1.0 / HZ)
+            rows += [r, np.repeat(np.asarray(to, float)[None], int(round(hold_s * HZ)), 0)]
+            cur = np.asarray(to, float).copy()
+        h = np.vstack(rows)
+        ex["ins_a"], ex["ins_h"] = np.repeat(self.arm_cmd[None], len(h), 0), h
+
+    def _pop_ins(self):
+        ex, k = self._exec, max(1, int(self.cfg["verify"].get("chunk", 5)))
+        a, h = ex["ins_a"][:k], ex["ins_h"][:k]
+        ex["ins_a"], ex["ins_h"] = ex["ins_a"][k:], ex["ins_h"][k:]
+        self.arm_cmd, self.hand_cmd = a[-1].copy(), h[-1].copy()
+        return {"arm_q_target": a.copy(), "hand_q_target": h.copy(), "done": False}
+
+    def _step_exec(self, obs, t):
+        ex, v = self._exec, self.cfg["verify"]
+        if ex["ins_a"] is not None and len(ex["ins_a"]):
+            return self._pop_ins()
+        plan, side, ph, rec = ex["plan"], ex["side"], ex["ph"], ex["rec"]
+        sl = side_slice(side)
+        k = len(plan.arm) - len(self.queue_a)          # plan ticks already handed out
+        vchunk = max(1, int(v.get("chunk", 5)))
+        skill_on = self.skill is not None and self.skill.active
+        if ex["stage"] == "grasp":
+            if k < ph["lift"][1]:
+                if skill_on:
+                    return self.skill.act(self, obs)
+                if k < ph["close"][0]:
+                    return self._pop(min(int(self.cfg["motion"]["chunk"]), ph["close"][0] - k))
+                return self._pop(min(vchunk, ph["lift"][1] - k))
+            ex["stage"] = "verify"
+            self.monitor.restart()
+        if ex["stage"] == "verify":       # top of the lift: nothing moves on until the grasp is confirmed
+            verdict = self.monitor.sample(obs, self.hand_cmd, side)
+            th, fi = self.monitor.last_load
+            if verdict == "held":
+                rec["grasp"] = "confirmed"
+                self._vlog(t, f"grasp confirmed ({plan.color} {side}): finger load thumb {th:.3f} fingers {fi:.3f} rad")
+                ex["stage"] = "carry"
+                self.monitor.restart()
+            else:
+                if verdict == "empty":
+                    return self._abort("grasp_failed", t, f"hand empty after the lift (load thumb {th:.3f} fingers {fi:.3f})")
+                if verdict == "unsure":
+                    if ex["waited"] >= int(round(float(v.get("max_wait_s", 1.0)) * HZ)):
+                        return self._abort("grasp_unconfirmed", t, f"grasp not confirmed within {v.get('max_wait_s', 1.0)} s "
+                                           f"(load thumb {th:.3f} fingers {fi:.3f})")
+                    ex["waited"] += vchunk
+                return self._hold_n(vchunk)
+        if ex["stage"] == "carry":
+            if k < ph["open"][0]:
+                verdict = self.monitor.sample(obs, self.hand_cmd, side)
+                if verdict == "empty":
+                    th, fi = self.monitor.last_load
+                    return self._abort("lost_in_transit", t, f"object lost during the carry at plan tick {k} "
+                                       f"(load thumb {th:.3f} fingers {fi:.3f})")
+                if skill_on:
+                    return self.skill.act(self, obs)
+                return self._pop(min(vchunk, ph["open"][0] - k))
+            rec["transit"] = "ok"
+            ex["stage"] = "release"
+        if ex["stage"] == "release":
+            if k < ph["open"][1]:
+                if skill_on:      # the RL hand residual is taken out by the skill itself (rate-limited), not by a jump
+                    return self.skill.act(self, obs)
+                return self._pop(min(vchunk, ph["open"][1] - k))
+            if self.skill is not None:
+                self.skill.active = False
+            rc = v.get("release") or {}
+            if not rc.get("check", True):
+                ex["stage"] = "finish"
+            else:
+                hand_open = self.hand_cmd.copy(); hand_open[sl] = self.post["open"][sl]
+                self._insert([hand_open], [float(rc.get("settle_s", 0.5))])
+                ex["stage"] = "release_check"
+                return self._pop_ins()
+        if ex["stage"] == "release_check":
+            rc = v.get("release") or {}
+            r = self.monitor.release_reading(obs, self.hand_cmd, side)
+            if r == "wait":
+                return self._hold_n(vchunk)
+            th, fi = self.monitor.last_load
+            if r == "stuck" and ex["recover"] < int(rc.get("recover_attempts", 2)):
+                ex["recover"] += 1
+                rec["recoveries"] = ex["recover"]
+                self._vlog(t, f"release NOT clean ({plan.color} {side}): load {th + fi:.3f} rad in the open posture -> "
+                              f"recovery {ex['recover']}")
+                seq = []
+                for name in rc.get("recover_postures", ["scissor_a", "scissor_b", "release"]):
+                    h = self.hand_cmd.copy(); h[sl] = self.post[name][sl]
+                    seq.append(h)
+                hand_open = self.hand_cmd.copy(); hand_open[sl] = self.post["open"][sl]
+                hold = float(rc.get("recover_hold_s", 0.3))
+                self._insert(seq + [hand_open], [hold] * len(seq) + [float(rc.get("settle_s", 0.5))])
+                return self._pop_ins()
+            rec["release"] = "failed" if r == "stuck" else ("clean" if ex["recover"] == 0 else "recovered")
+            self._vlog(t, f"release {rec['release']} ({plan.color} {side}): load {th + fi:.3f} rad, recoveries {ex['recover']}")
+            self.queue_h[:, sl] = self.post["open"][sl]     # the hand is in `open` already: no second ramp on the way home
+            ex["stage"] = "finish"
+        return self._pop()          # finish: retreat + home as planned
+
+    def _abort(self, kind, t, why):
+        """Stop the pick here and go back to the start pose along validated ticks of the plan (played backwards).
+        grasp_failed (hand empty)        : open, back to the pregrasp pose, home.
+        grasp_unconfirmed (maybe holding): back DOWN the lift, open at the grasp pose (puts a half-held object back
+                                           where it was instead of dropping it from carry height), up, home.
+        lost_in_transit                  : open, back along the carry to the top of the lift, home.
+        The next look (camera) then says where the object is; the normal loop retries it (policy.max_attempts)."""
+        ex = self._exec
+        plan, side, ph, rec = ex["plan"], ex["side"], ex["ph"], ex["rec"]
+        sl, mo, dt = side_slice(side), self.cfg["motion"], 1.0 / HZ
+        if self.skill is not None:
+            self.skill.active = False
+        k = len(plan.arm) - len(self.queue_a)
+        s_des, s_close, (s_lift, e_lift) = ph["descend"][0], ph["close"][0], ph["lift"]
+        cur_a, cur_h = self.arm_cmd.copy(), self.hand_cmd.copy()
+        hand_open = cur_h.copy(); hand_open[sl] = self.post["open"][sl]
+        back_home = [plan.arm[s_des - 1]] + list(plan.arm[:s_des][::-1]) + [ex["arm0"]]   # pregrasp pose -> start pose
+
+        def path(a_from, Qs):
+            Q = [np.asarray(a_from, float)]
+            for q in Qs:                                       # drop repeated poses (holds in the plan)
+                if np.abs(q - Q[-1]).max() > 1e-9:
+                    Q.append(np.asarray(q, float))
+            return time_scale(Q, mo["arm_max_vel"], mo["arm_max_acc"], dt)
+
+        def with_hand(a, h_from, h_to):                        # hand ramps at the start of an arm move
+            hr = ramp(h_from, h_to, mo["hand_max_vel"], dt)
+            n = max(len(a), len(hr))
+            a = np.vstack([a, np.repeat((a[-1] if len(a) else cur_a)[None], n - len(a), 0)]) if len(a) < n else a
+            h = np.repeat(np.asarray(h_to, float)[None], n, 0)
+            h[:len(hr)] = hr
+            return a, h
+
+        if kind == "grasp_unconfirmed":
+            a1 = path(cur_a, plan.arm[s_lift - 1:e_lift][::-1])               # down the lift, hand as it is
+            h1 = np.repeat(cur_h[None], len(a1), 0)
+            hr = ramp(cur_h, hand_open, mo["hand_max_vel"], dt)                # open at the grasp pose + short hold
+            h2 = np.vstack([hr, np.repeat(hand_open[None], int(round(0.2 * HZ)), 0)])
+            a2 = np.repeat((a1[-1] if len(a1) else cur_a)[None], len(h2), 0)
+            a3 = path(a2[-1], list(plan.arm[:s_close][::-1]) + [ex["arm0"]])  # up the descend path, then home
+            h3 = np.repeat(hand_open[None], len(a3), 0)
+            A, Hd = np.vstack([a1, a2, a3]), np.vstack([h1, h2, h3])
+        else:
+            carry_back = list(plan.arm[e_lift - 1:k][::-1]) if kind == "lost_in_transit" else []
+            A, Hd = with_hand(path(cur_a, carry_back + back_home), cur_h, hand_open)
+        clips = self.planner.dry_run_safety(cur_a, cur_h, A, Hd)
+        if clips:   # should not happen (plan ticks reversed); fall back to the plain joint move used at episode start
+            self._vlog(t, f"recovery path had {clips} predicted safety clips: joint move home instead")
+            A, Hd = self.planner.go_to(cur_a, cur_h, ex["arm0"], hand_open)
+        rec["grasp" if kind.startswith("grasp") else "transit"] = kind
+        self._vlog(t, f"ABORT {kind} ({plan.color} {side}): {why} -> recover ({len(A) / HZ:.1f} s), no transport / release")
+        self._enqueue(A, Hd)
+        self._exec = None
+        return self._pop()
 
     def _note(self, t, msg):
         self.events.append((round(t, 2), msg))

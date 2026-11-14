@@ -148,6 +148,7 @@ grasp:
     - [1.0, -1.0, 0.0]
     - [0.0, -1.0, 0.0]
   finger_hint_weight: 0.3
+  retry_rotate_hints: true    # a retry of the same object starts with the NEXT finger direction (not the same grasp again)
   height_frac: 0.5            # grasp point z = counter + height_frac * object size (before fingertip check)
   fingertip_clearance: 0.012  # fingertips (preshape posture, URDF) stay this far above the counter at grasp
   approach_height: 0.08       # pregrasp = grasp point this far above the grasp height
@@ -206,7 +207,34 @@ hand:                          # LEFT order: thumb0, thumb1, thumb2, middle0, mi
                                                          # centre: in the sim the cube got wedged between index and middle)
   release:  [0.0, -0.5, 1.5, -0.05, -0.05, -0.05, -0.05] # let go: thumb back + up, fingers straight (sim: the cube
                                                          # stayed hooked in half-bent fingers with `open`/`preshape`)
+  # Release recovery (verify.release): one long finger curls while the other is straight, then the other way round.
+  # An object wedged between the inner edges of index and middle is held by BOTH edges; moving one finger away
+  # along its arc takes one edge out, so the object can drop (thumb stays back + up, out of the way).
+  scissor_a: [0.0, -0.5, 1.5, -0.05, -0.05, -1.0, -0.6]
+  scissor_b: [0.0, -0.5, 1.5, -1.0, -0.6, -0.05, -0.05]
   right: null                  # optional explicit right-hand postures {open, preshape, closed} in RIGHT DDS order
+
+# Closed-loop grasp verification (policy.py `_step_exec`, grasp_monitor.py). The only contact feedback is the
+# finger tracking error (measured - commanded hand_q): an object between the fingers stops them short of the
+# commanded posture. Thresholds MEASURED IN THE AALTO SIM (kp-100 hand, 24 picks, see grasp_monitor.py): held =
+# thumb >= 0.022 and fingers >= 0.029 rad; empty <= 0.006 rad. TUNE on the robot (soft hand: larger errors).
+verify:
+  enabled: true               # false = the old open-loop play-back of the whole pick -> place
+  chunk: 5                    # ticks per act() from the close to the release (an observation every 0.17 s)
+  settle_s: 1.0               # read the load only after the commanded hand posture has been constant this long
+  thumb_held: 0.010           # rad, L1 over the 3 thumb joints   } BOTH needed for "held" (two actuator groups)
+  fingers_held: 0.014         # rad, L1 over the 4 finger joints  }
+  load_empty: 0.010           # rad, L1 over all 7 joints: at or below = the fingers closed on nothing
+  confirm_samples: 2          # consecutive agreeing readings ...
+  confirm_s: 0.2              # ... spanning at least this long, before a verdict counts
+  max_wait_s: 1.0             # pause at the top of the lift while the reading is in between; then put it back + retry
+  release:
+    check: true               # after the release: fingers to `open` above the bin, read the load again
+    settle_s: 0.5
+    load_stuck: 0.015         # rad, L1 over 7 joints in the `open` posture: above = an object is hooked in the fingers
+    recover_attempts: 2
+    recover_postures: [scissor_a, scissor_b, release]   # hand.<name>, in turn, each held recover_hold_s
+    recover_hold_s: 0.3
 
 policy:
   max_attempts: 2             # same object re-detected after this many tries -> skip it
