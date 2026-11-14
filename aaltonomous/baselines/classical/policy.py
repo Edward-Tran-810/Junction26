@@ -57,6 +57,13 @@ class ClassicalPolicy:
         self.safety = safety or SafetyConfig(dt=1.0 / HZ)
         self.perception = Perception(self.cfg, self.scene, self.cal)
         self.planner = Planner(self.cfg, self.scene, self.post, self.home, self.kin, self.safety, self.spec)
+        # Optional RL grasp residual (aaltonomous/rl/skill.py). OFF unless cfg["rl_grasp"] or $AALTO_RL_GRASP
+        # names an exported actor; with it off nothing below changes.
+        rl = self.cfg.get("rl_grasp") or os.environ.get("AALTO_RL_GRASP")
+        self.skill = None
+        if rl:
+            from aaltonomous.rl.skill import GraspSkill
+            self.skill = GraspSkill(rl, self.spec)
         self.require_confirm = require_confirm
         self.threaded = threaded
         if threaded:  # pure-Python planning holds the GIL: hand it back to act() sooner (default 5 ms)
@@ -105,6 +112,8 @@ class ClassicalPolicy:
             self.hand_cmd = np.clip(np.asarray(obs["hand_q"], float), sp.hand_lower, sp.hand_upper)
         t = float(obs.get("t", 0.0))
         if self.queue_a is not None and len(self.queue_a):
+            if self.skill is not None and self.skill.active:
+                return self.skill.act(self, obs)
             return self._pop()
         if self.state == "init":
             a, h = self.planner.go_to(self.arm_cmd, self.hand_cmd, self.home, self.post["open"])
@@ -232,6 +241,8 @@ class ClassicalPolicy:
         xy = plan.waypoints["grasp"][:2]
         self.attempts.append((xy, 1))
         self._enqueue(plan.arm, plan.hand)
+        if self.skill is not None:
+            self.skill.begin(plan, self)
         self.state = "executing"
         self._note(t, f"execute {plan.summary()}")
         return self._pop()
