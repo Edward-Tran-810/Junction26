@@ -41,19 +41,16 @@ from aaltonomous.sim.aalto_task import scene_cfg as SC
 from aaltonomous.sim.aalto_task.layout import ARM_HOME, PELVIS_W
 
 from . import scripted as S
+from .common import ACTION_DIMS, ARM_VEL_CAP, CAP_FRAC, HAND_VEL_CAP  # noqa: F401
 
 LIB_DEFAULT = str(SC.REPO / "aaltonomous/rl/data/lib_left.npz")
 SHAPES = S.SHAPES
 HOLD_PATTERN = (8, 6, 6)          # physics steps per 30 Hz tick (sum 20 x 5 ms = 0.1 s = 3 ticks)
-ARM_VEL_CAP, HAND_VEL_CAP = 1.0, 3.0
-CAP_FRAC = 0.97                   # use 97 % of the cap (float + filter rounding)
 LIFT_M = 0.10
 # Left grasp point in the palm frame (= ORACLE_OVERRIDES grasp.point_in_palm) and Dex3 fingertips in their links.
 GRASP_IN_PALM = (0.099, -0.084, 0.015)
 TIP_LINKS = ("left_hand_index_1_link", "left_hand_middle_1_link", "left_hand_thumb_2_link")
 TIP_OFFSETS = ((0.052, 0.0, 0.0), (0.052, 0.0, 0.0), (0.0, -0.052, 0.0))
-# Action spaces: indices into the 14-vector [left arm 7, left hand 7 (left DDS order)].
-ACTION_DIMS = {"hand": list(range(7, 14)), "hand_wrist": [4, 5, 6] + list(range(7, 14)), "full": list(range(14))}
 
 
 def _park_xy(i):

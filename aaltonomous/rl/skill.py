@@ -21,7 +21,7 @@ import numpy as np
 
 from aaltonomous.interface.safety import JointSpec, SafetyConfig
 
-from .grasp_env import ACTION_DIMS, ARM_VEL_CAP, CAP_FRAC, HAND_VEL_CAP
+from .common import ACTION_DIMS, ARM_VEL_CAP, CAP_FRAC, HAND_VEL_CAP
 from .scripted import HOLD_S, POST_S, SHAKE_S, SHAPES
 
 ARM_MIRROR = np.array([1, -1, -1, 1, -1, 1, -1], float)

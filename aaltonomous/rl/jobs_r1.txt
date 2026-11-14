@@ -16,3 +16,4 @@ aaltonomous/rl/runs/r08_noise_high.yaml 1
 aaltonomous/rl/runs/r08_noise_high.yaml 2
 aaltonomous/rl/runs/r09_no_estimate.yaml 1
 aaltonomous/rl/runs/r09_no_estimate.yaml 2
+aaltonomous/rl/runs/r01_base.yaml 2

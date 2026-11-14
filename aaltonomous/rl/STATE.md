@@ -86,14 +86,27 @@ for 60/60 cells), colour cycle (60/60 match).
 | r09_no_estimate | proprioception + script only | = r01 |
 (r02/r04 baselines were measured before the finger-material fix; wide mode was unaffected.)
 
-Training runs: **none yet.** Pilot (r01 x 2 seeds, ~25 iterations, ~6 GPU-min) collapsed to success 0 / lifted 0:
-per-tick exploration noise breaks the scripted grasp (measured, scripted + N(0, s) actions in r01's distribution:
-s=0.05 cube 379/531, cyl 68/511, tri 13/518; s=0.1: 28/531, 0/511, 1/518), so PPO only learned to avoid penalties.
-Fix implemented, **NOT yet tested**: residual = EMA of the actions (alpha 0.2, `action_ema`), actor sees the smoothed
-residual, action-rate penalty on its change; skill.py mirrors it. Next: re-run the noise check with the EMA, then
-init_noise_std ~0.1-0.3, gamma 0.995, counter penalty only for real contact (< 1 mm, w 0.05), then relaunch.
-Concurrency: 2 runs on GPU 1 = ~14.5k fps each vs 27k alone (+8 % total), so GPU-hours ~ env-steps / 27k. Plan: 400 iterations (52 M steps) per run, evaluate at 200 and 400 in its own
-distribution vs the scripted baseline (kill rule: two consecutive evaluations below it), survivors continue.
+Training runs: pilot 1 (std 0.3, white noise) collapsed to success 0 (measured: scripted + N(0, s) actions,
+r01 distribution: s=0.05 cyl 68/511; s=0.1 cube 28/531, cyl 0/511). Fixes, each measured:
+- residual = EMA of actions (alpha 0.2): s=0.1 -> cube 457/531, cyl 308/511, tri 61/518. Noise on the arm only
+  is harmless (509 / 430 / 128); the hand residual is the sensitive part.
+- init std 0.1, gamma 0.995, counter penalty only below 1 mm (w 0.05).
+- Pilot 2 (r01 s1, 60 iterations, 7.9 M steps): deterministic eval in r01's own distribution, 3120 cases, same cases
+  and physics draws as the scripted baseline: cube 980/1039 (scripted 1009), cyl 862/1028 (904), tri 312/1053 (291).
+
+**Round 1 started 13:33**: 9 configs x 2 seeds x 400 iterations (52 M steps each), 2 concurrent on GPU 1
+(~14k fps each). `autoeval.py` evaluates model_200 and model_399 deterministically in the run's own distribution
+vs the scripted baseline on the same cases (kill rule), and model_399 also on held-out physics (fric0.3, fric0.9,
+mass1.5, the other finger model, dds_a0). r01 s2 died at start (a path under /workspace that vanished, not code);
+re-queued at the end.
+
+## Integration (step 3 prep, measured offline)
+- Hook: commit `1d44593`, 11 lines in `classical/policy.py`, off unless `cfg["rl_grasp"]` or `$AALTO_RL_GRASP`;
+  test_classical.py 10/10 OK with it off.
+- `export.py`: TorchScript actor + `skill_meta.json`; CPU 1 thread: 0.020 ms median, 0.035 ms p99 per step.
+- `check_skill.py` (pilot-2 actor, kinematic robot, real SafetyFilter incl. FK workspace/keep-out): 60/60 grasp_test
+  cells planned, **0 clipped steps**, max |residual| 0.277 rad. The skill imports no Isaac/pinocchio modules.
+- `AALTO_RL_SWAP_RIGHT_IM=1` (DDS sim only) compensates the sim's right-hand index/middle swap.
 
 ## Questions for the human
 1. Triangle validation (above): I started training before the dense DDS result. Stop me if you want it first.
