@@ -126,7 +126,7 @@ class GraspEnvCfg(DirectRLEnvCfg):
     w_success: float = 10.0
     w_lift: float = 0.05                   # per tick, x clamp(rise / 10 cm) after the close phase starts
     w_action_rate: float = 0.02
-    w_counter: float = 0.2                 # per tick a fingertip is within 3 mm of the counter (or below)
+    w_counter: float = 0.05                # per tick a fingertip is within 1 mm of the counter (or below)
     w_violation: float = 1.0
 
     def __post_init__(self):
@@ -384,7 +384,7 @@ class GraspEnv(DirectRLEnv):
         self.lifted_any |= lifted
         in_hold = ph == 3
         self.held_hold &= ~in_hold | lifted
-        near_counter = (tips[:, :, 2] < self.counter_z + 0.003).any(1)
+        near_counter = (tips[:, :, 2] < self.counter_z + 0.001).any(1)
         self.counter_ticks += near_counter.float()
         self.min_obj_dz = torch.minimum(self.min_obj_dz, rise)
         # safety proxy: wrist + palm vs counter keep-out (z < 0.03 over the counter footprint) and workspace box

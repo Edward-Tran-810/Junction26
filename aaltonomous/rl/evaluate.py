@@ -58,7 +58,7 @@ def load_policy(path, env, run_cfg):
     import torch
     from aaltonomous.rl.train import make_runner
     runner = make_runner(env, run_cfg, log_dir=None)
-    runner.load(path, load_optimizer=False)
+    runner.load(path, map_location=str(env.device))
     pol = runner.get_inference_policy(device=env.device)
     return lambda obs: pol(obs)
 

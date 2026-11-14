@@ -1,2 +1,5 @@
 GPU1 start 2026-11-14T12:04:42
 GPU1 stop 2026-11-14T12:09:27 pilot r01 x2 (~6 min)
+GPU1 start 2026-11-14T13:24:57 pilot2
+GPU1 stop 2026-11-14T13:31:02 pilot2
+GPU1 start 2026-11-14T13:33:35 round1 matrix (18 runs x 400 it, K=2)

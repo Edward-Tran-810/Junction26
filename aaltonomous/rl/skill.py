@@ -13,6 +13,7 @@ the hand keeps its last residual until the plan's `open` phase, then decays too.
 from __future__ import annotations
 
 import json
+import os
 import time
 from pathlib import Path
 
@@ -25,6 +26,15 @@ from .scripted import HOLD_S, POST_S, SHAKE_S, SHAPES
 
 ARM_MIRROR = np.array([1, -1, -1, 1, -1, 1, -1], float)
 TAIL = int(round(HOLD_S * 30)) + int(round(SHAKE_S * 30)) + int(round(POST_S * 30))
+
+
+SWAP_RIGHT_IM = os.environ.get("AALTO_RL_SWAP_RIGHT_IM", "0") == "1"   # DDS SIM ONLY: right index<->middle swapped
+
+
+def _swap_im(h7):
+    h = np.asarray(h7, float).copy()
+    h[[3, 4, 5, 6]] = h[[5, 6, 3, 4]]
+    return h
 
 
 def hand_r2l(r7):
@@ -58,8 +68,9 @@ class GraspSkill:
         self.times = []                     # per-tick inference wall time (s)
 
     # ------------------------------------------------------------------ plan hook
-    def begin(self, plan, det=None):
-        """Called when the classical policy starts executing `plan`. det: the Detection it was planned for."""
+    def begin(self, plan, pol=None, det=None):
+        """Called when the classical policy starts executing `plan`. det: the Detection it was planned for; default
+        = the detection in pol.last_detections nearest the plan's grasp point (the oracle's carry shape + yaw)."""
         ph = {n: (s, e) for n, s, e in plan.phases}
         if not all(k in ph for k in ("to_pregrasp", "descend", "close", "lift")):
             self.active = False
@@ -74,8 +85,12 @@ class GraspSkill:
         self.L = n + TAIL
         self.last_a = np.zeros(len(self.dims))
         self.offset = np.zeros(28)                   # current residual (arm 14 + hand 14) of the last command
-        sl = 1 if self.side == "right" else 0
-        top = det.top if det is not None else plan.waypoints["grasp"]
+        g = np.asarray(plan.waypoints["grasp"], float)
+        if det is None and pol is not None and getattr(pol, "last_detections", None):
+            det = min(pol.last_detections, key=lambda d: float(np.linalg.norm(np.asarray(d.top[:2]) - g[:2])))
+            if np.linalg.norm(np.asarray(det.top[:2]) - g[:2]) > 0.03:
+                det = None
+        top = det.top if det is not None else g
         x, y = float(top[0]), float(top[1])
         yaw = float(getattr(det, "yaw", 0.0) or 0.0)
         if self.side == "right":
@@ -93,12 +108,14 @@ class GraspSkill:
     def _to_left(self, arm7, hand7):
         if self.side == "left":
             return np.asarray(arm7, float), np.asarray(hand7, float)
-        return np.asarray(arm7, float) * ARM_MIRROR, hand_r2l(hand7)
+        h = _swap_im(hand7) if SWAP_RIGHT_IM else hand7
+        return np.asarray(arm7, float) * ARM_MIRROR, hand_r2l(h)
 
     def _from_left(self, arm7, hand7):
         if self.side == "left":
             return arm7, hand7
-        return arm7 * ARM_MIRROR, hand_l2r(hand7)
+        h = hand_l2r(hand7)
+        return arm7 * ARM_MIRROR, (_swap_im(h) if SWAP_RIGHT_IM else h)
 
     # ------------------------------------------------------------------ per tick
     def act(self, pol, obs):
