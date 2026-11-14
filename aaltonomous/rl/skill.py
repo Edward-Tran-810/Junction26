@@ -72,7 +72,7 @@ class GraspSkill:
         #   hand_gain   scale on the 7 hand residuals (1 = as trained)
         #   thumb0_max  |thumb_0 residual| limit, rad (thumb_0 swings the thumb sideways, towards the gap between
         #               index and middle: with it the object is pushed into that gap and wedges, see STATE)
-        lim = dict(cfg.get("limits") or json.loads(os.environ.get("AALTO_RL_LIMITS", "{}") or "{}"))
+        lim = {**(cfg.get("limits") or {}), **json.loads(os.environ.get("AALTO_RL_LIMITS", "{}") or "{}")}
         self.fade = max(1, int(lim.get("fade_ticks", 15)))
         self.hand_gain = float(lim.get("hand_gain", 1.0))
         self.thumb0_max = lim.get("thumb0_max")

@@ -245,6 +245,16 @@ verify:
     recover_postures: [scissor_a, scissor_b, release]   # hand.<name>, in turn, each held recover_hold_s
     recover_hold_s: 0.3
 
+# RL grasp residual (aaltonomous/rl/skill.py; active only when $AALTO_RL_GRASP or `rl_grasp` names an exported
+# actor). The actor was trained on lift + hold + shake, with no carry and no release in its reward, and learned a deep
+# squeeze with the thumb swung sideways: in the DDS sim that ejects cubes at the close and wedges objects between
+# index and middle (seed 1000, as trained: 1/3 before the fixes, 2/3 with verification + recovery). Bounded as below
+# it sorted 3/3 on that seed with clean releases. One seed is not a proof: see GRASP_FIXES.md for the 5-seed numbers.
+rl_limits:
+  fade_ticks: 15              # arm residual ramped out over 0.5 s after the lift (was removed in one tick)
+  hand_gain: 0.5              # scale on the 7 hand residuals (1.0 = as trained)
+  thumb0_max: 0.05            # rad, limit on the thumb_0 residual (sideways swing towards the index/middle gap)
+
 policy:
   max_attempts: 2             # same object re-detected after this many tries -> skip it
   same_object_radius: 0.03

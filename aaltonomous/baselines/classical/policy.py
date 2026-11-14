@@ -66,6 +66,8 @@ class ClassicalPolicy:
         self.skill = None
         if rl:
             from aaltonomous.rl.skill import GraspSkill
+            if isinstance(rl, str):      # deployment envelope from config `rl_limits` ($AALTO_RL_LIMITS overrides)
+                rl = {"checkpoint": rl, "limits": self.cfg.get("rl_limits") or {}}
             self.skill = GraspSkill(rl, self.spec)
         self.require_confirm = require_confirm
         self.threaded = threaded
