@@ -306,12 +306,12 @@ class ClassicalPolicy:
         det = getattr(plan, "det", None)
         self._last_place = (np.asarray(xy, float), plan.color, getattr(det, "shape", None), plan.target_bin,
                             list(self.last_detections))
-        if plan.target_bin in self.scene.bin_names:
-            self.planner.drop_count[plan.target_bin] = self.planner.drop_count.get(plan.target_bin, 0) + 1
         self._enqueue(plan.arm, plan.hand)
         if self.skill is not None:
             self.skill.begin(plan, self)
         self._begin_exec(plan)
+        if self._exec is None:       # open loop: the release is assumed; closed loop counts it when it happened
+            self._count_drop(plan)
         self.state = "executing"
         self._note(t, f"execute {plan.summary()}")
         return self._pop()
@@ -363,6 +363,11 @@ class ClassicalPolicy:
         self._exec = {"plan": plan, "side": plan.side, "ph": ph, "stage": "grasp", "ins_a": None, "ins_h": None,
                       "arm0": self.arm_cmd.copy(), "waited": 0, "recover": 0, "rec": rec}
         self.monitor.restart()
+
+    def _count_drop(self, plan):
+        """Objects released per bin (planner grasp.drop_spread: the next object lands elsewhere in the bin)."""
+        if plan.target_bin in self.scene.bin_names:
+            self.planner.drop_count[plan.target_bin] = self.planner.drop_count.get(plan.target_bin, 0) + 1
 
     def _vlog(self, t, msg):
         self.events.append((round(t, 2), "verify: " + msg))
@@ -468,6 +473,8 @@ class ClassicalPolicy:
                 self._insert(seq + [hand_open], [hold] * len(seq) + [float(rc.get("settle_s", 0.5))])
                 return self._pop_ins()
             rec["release"] = "failed" if r == "stuck" else ("clean" if ex["recover"] == 0 else "recovered")
+            if rec["release"] != "failed":
+                self._count_drop(plan)
             self._vlog(t, f"release {rec['release']} ({plan.color} {side}): load {th + fi:.3f} rad, recoveries {ex['recover']}")
             self.queue_h[:, sl] = self.post["open"][sl]     # the hand is in `open` already: no second ramp on the way home
             ex["stage"] = "finish"

@@ -291,3 +291,23 @@ class TestGraspSelection(unittest.TestCase):
         zc, H = r["env"].scene.counter_z, r["env"].scene.object_height(p.det.shape)
         self.assertGreaterEqual(p.waypoints["grasp"][2], zc + 0.5 * H - 1e-6)       # mid-height or fingertip-limited
         self.assertLess(p.waypoints["grasp"][2], zc + H - 0.008)                    # never above the object
+
+
+class TestDropSpread(unittest.TestCase):
+    """Objects released into the same bin must not land on each other (z 0.08 vs 0.035 m in the Isaac runs)."""
+
+    def test_second_object_in_a_bin_gets_a_different_release_point(self):
+        r = run_episode()
+        by_bin = {}
+        for p in r["pol"].plans:
+            if p.ok and p.target_bin in r["env"].scene.bin_names:
+                by_bin.setdefault(p.target_bin, []).append(np.asarray(p.waypoints["drop"][:2]))
+        pairs = [v for v in by_bin.values() if len(v) >= 2]
+        self.assertTrue(pairs, "seed 0 has two objects for one bin")
+        for v in pairs:
+            self.assertGreater(np.linalg.norm(v[0] - v[1]), 0.03)
+
+    def test_failed_grasp_does_not_use_up_an_offset(self):
+        r = run_episode({"miss": [0]})
+        counts = r["pol"].planner.drop_count
+        self.assertEqual(sum(counts.values()), len(r["outcomes"]))      # one per object actually released

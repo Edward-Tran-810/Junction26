@@ -162,6 +162,10 @@ grasp:
   fingertip_clearance: 0.012  # fingertips (preshape posture, URDF) stay this far above the counter at grasp
   approach_height: 0.08       # pregrasp = grasp point this far above the grasp height
   carry_height: 0.16          # grasp point z above the counter while carrying (clears bin walls + object)
+  # Release offsets (pelvis xy, m) cycled by how many objects that bin already received. MEASURED (final_*_v2 runs,
+  # seeds 1001/1002): the 2nd object released at the same point lands ON the 1st (z 0.08 vs 0.035 m), pokes above
+  # the rim and scores "counter": 3 of the 5 unsorted objects of the classical run. +x = away from the robot.
+  drop_spread: [[0.0, 0.0], [0.035, 0.03], [0.035, -0.03], [0.0, 0.03], [0.0, -0.03]]
   drop_inset: 0.05            # release this far inside the inner walls at the box point nearest the pelvis (null = centre)
   drop_above_rim: 0.04        # grasp point above bin rim + object half size when releasing
   retreat_up: 0.08            # then a joint-space move home: start it high enough to clear the bin rims
