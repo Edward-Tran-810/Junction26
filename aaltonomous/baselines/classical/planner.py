@@ -119,6 +119,13 @@ class Planner:
         self.height = float(cfg["perception"].get("object_height") or scene.object_height())
         self.mapping = mapping or dict(FIXED_MAPPING)  # sort_fixed: fixed colour -> bin position
         self.insert = None                             # InsertGeometry, built on first use (rung 3)
+        self.grasp_mode = str(cfg["grasp"].get("mode", "side"))
+        if self.grasp_mode != "side":
+            import os
+            if not (self.grasp_mode == "topdown" and os.environ.get("AALTO_ALLOW_LEGACY_TOPDOWN") == "1"):
+                raise ValueError(f"grasp.mode={self.grasp_mode!r}: SIDE grasping is the only authorized strategy "
+                                 "(legacy top-down needs AALTO_ALLOW_LEGACY_TOPDOWN=1 and is for reproducing old evidence only)")
+        self.side_log = []                             # one record per side-grasp feasibility evaluation (clearance numbers)
         self._lid_thick = 0.0                          # raised rim of the lid bin while planning an insertion
         gs = cfg["grasp"].get("select") or {}
         self.select_cfg = gs if gs.get("enabled") else None
@@ -464,7 +471,28 @@ class Planner:
         ps = dict((self.cfg["grasp"].get("per_shape") or {}).get(getattr(det, "shape", None)) or {})
         saved = dict(self.kin.offset)
         sel = self.select_grasp(det)
-        if ps.get("point_in_palm") is not None:            # explicit per-shape point wins over the selection
+        saved_orient = (self.kin.approach_dir.copy(), self.kin.hint.copy(), self.kin.w_hint)
+        if self.grasp_mode == "side":
+            # SIDE GRASP: the palm normal (approach axis) is HORIZONTAL and points at the object from the hand's own side
+            # (left hand: palm faces right, right hand: palm faces left); fingers point forward; the index / middle pair is
+            # stacked VERTICALLY. Pinch = thumb vs the LOWER finger, the object centred 'lateral' below the hand centre line.
+            sg = self.cfg["grasp"].get("side") or {}
+            ax_y = float(self.kin.axis[side][1])                       # +-1: sign of the palm axis that is the approach axis
+            u = np.array([0.0, -1.0 if side == "left" else 1.0, 0.0])
+            hint = np.array([1.0, 0.0, 0.0])
+            zhat = np.cross(hint, ax_y * u)                            # palm z axis in the world for this orientation
+            lat = float(sg.get("lateral", 0.014))
+            off_z = -np.sign(zhat[2]) * lat                            # object LOWER than the hand centre (lower finger = pinch finger)
+            p = np.asarray(saved["left"], float).copy(); p[2] = off_z
+            self.kin.offset = {"left": p, "right": p * np.array([1.0, -1.0, 1.0])}
+            self.kin.approach_dir, self.kin.hint, self.kin.w_hint = u, hint, 1.0
+            self._side_u = u
+            sel = None
+        else:
+            self._side_u = None
+        if self.grasp_mode == "side":
+            ps.pop("point_in_palm", None); ps["height_frac"] = 0.5
+        elif ps.get("point_in_palm") is not None:            # explicit per-shape point wins over the selection
             p = np.asarray(ps["point_in_palm"], float)
             self.kin.offset = {"left": p, "right": p * np.array([1.0, -1.0, 1.0])}
         elif sel is not None:                               # lateral (palm z) from the geometry, x / y as configured
@@ -478,6 +506,7 @@ class Planner:
             return plan
         finally:
             self.kin.offset = saved
+            self.kin.approach_dir, self.kin.hint, self.kin.w_hint = saved_orient
 
     def _plan_side_impl(self, det, side, bin_name, arm_q, hand_q, place_xy, ps, insert=None):
         cfg, g, mo = self.cfg, self.cfg["grasp"], self.cfg["motion"]
@@ -496,21 +525,43 @@ class Planner:
         # grasp height: object mid-height, raised until the preshaped fingers clear the counter
         xy = det.top[:2] + np.asarray((g.get("arm_xy_offset") or {}).get(side, [0.0, 0.0]), float)  # per-arm, TUNE
         z = zc + float(ps.get("height_frac", g["height_frac"])) * H
-        for _ in range(4):
+        sg = g.get("side") or {}
+        ignore_table = bool(sg.get("diagnostic_ignore_table")) and self.grasp_mode == "side"
+        if self.grasp_mode == "side":
             qg, ok = self._ik(side, np.r_[xy, z], arm_q, "grasp", plan)
             if not ok:
-                plan.reason = f"IK grasp {side}"
+                plan.reason = f"IK grasp {side}: palm cannot face the object at mid-height"
                 return plan
-            c = self.clearance(side, qg, hand_pre, fingers_only=True)
-            if c >= g["fingertip_clearance"] - 1e-3:
-                break
-            z += g["fingertip_clearance"] - c
+            # FEASIBILITY GATE (measured, not assumed): every hand point (palm, finger links, fingertips) in the grasp
+            # posture and in the approach posture must stay above the counter. Nothing is released or forced to pass it.
+            c_cls = self.clearance(side, qg, hand_cls, fingers_only=False)
+            c_pre = self.clearance(side, qg, hand_pre, fingers_only=False)
+            low = min(c_cls, c_pre)
+            rec = {"shape": shape, "side": side, "grasp_z_above_counter_mm": round((z - zc) * 1e3, 1),
+                   "lowest_hand_point_mm": round(low * 1e3, 1), "closed_mm": round(c_cls * 1e3, 1), "preshape_mm": round(c_pre * 1e3, 1)}
+            self.side_log.append(rec)
+            plan.grasp = {"type": "side", **rec}
+            need = float(sg.get("min_clearance", 0.003))
+            if low < need and not ignore_table:
+                plan.reason = (f"no valid side grasp: lowest hand point {low * 1e3:+.1f} mm vs the counter at the object's mid-height "
+                               f"(needs >= {need * 1e3:.0f} mm): the index/middle pair is 57 mm tall, the {shape or 'object'} {H * 1e3:.0f} mm")
+                return plan
         else:
-            plan.reason = "fingers hit the counter"
-            return plan
-        if z > zc + H - 0.008:
-            plan.reason = f"grasp point {100 * (z - zc):.1f} cm above counter: above the object top (point_in_palm?)"
-            return plan
+            for _ in range(4):
+                qg, ok = self._ik(side, np.r_[xy, z], arm_q, "grasp", plan)
+                if not ok:
+                    plan.reason = f"IK grasp {side}"
+                    return plan
+                c = self.clearance(side, qg, hand_pre, fingers_only=True)
+                if c >= g["fingertip_clearance"] - 1e-3:
+                    break
+                z += g["fingertip_clearance"] - c
+            else:
+                plan.reason = "fingers hit the counter"
+                return plan
+            if z > zc + H - 0.008:
+                plan.reason = f"grasp point {100 * (z - zc):.1f} cm above counter: above the object top (point_in_palm?)"
+                return plan
 
         wall = float(sc.cfg["bins"]["wall_height"])
         z_carry = zc + max(g["carry_height"], wall + H + 0.03)
@@ -531,7 +582,10 @@ class Planner:
             z_pre = gm.lid_top_z + H / 2 + float(ic.get("pre_gap", 0.02))          # object bottom this far above the lid
             z_drop = gm.lid_under_z + H / 2 + float(ic.get("end_gap", 0.002))      # object bottom at the lid underside
             z_carry = max(z_carry, z_pre + float(ic.get("carry_above_pre", 0.04)))
-        P = {"pregrasp": np.r_[xy, max(z + g["approach_height"], z_carry)], "grasp": np.r_[xy, z], "lift": np.r_[xy, z_carry],
+        pre_pt = np.r_[xy, max(z + g["approach_height"], z_carry)]
+        if self.grasp_mode == "side":      # LATERAL approach: start beside the object, move along the palm normal at mid-height
+            pre_pt = np.r_[xy, z] - self._side_u * float(sg.get("approach_dist", 0.08))
+        P = {"pregrasp": pre_pt, "grasp": np.r_[xy, z], "lift": np.r_[xy, z_carry],
              "above_bin": np.r_[bxy, z_carry], "drop": np.r_[bxy, z_drop], "retreat": np.r_[bxy, z_drop + g["retreat_up"]]}
         if insert is not None:
             P["pre"] = np.r_[bxy, z_pre]
@@ -632,15 +686,18 @@ class Planner:
         # clearance over the whole trajectory (grasp phases use the fingertip margin)
         grasp_ticks = np.zeros(len(plan.arm), bool)
         near = ("descend", "close", "lift") + (("carry", "open", "retreat") if place_xy is not None else ())
+        if self.grasp_mode == "side":      # the pre-grasp pose is already beside the object at mid-height
+            near = near + ("to_pregrasp",)
         for name, s, e in phases:
             if name in near:
                 grasp_ticks[s:e] = True
         closing = np.zeros(len(plan.arm), bool)
         for name, s, e in phases:
             closing[s:e] |= name == "close" or (place_xy is not None and name == "open")
-        for k in range(0, len(plan.arm), 3):
+        for k in (range(0, len(plan.arm), 3) if not ignore_table else ()):
             # closing: the thumb swings through its lowest point; touching the mat lightly is acceptable
-            need = 0.003 if closing[k] else g["fingertip_clearance"] if grasp_ticks[k] else mo["counter_clearance"]
+            need = (0.003 if closing[k] else (float(sg.get("min_clearance", 0.003)) if self.grasp_mode == "side" else g["fingertip_clearance"])
+                    if grasp_ticks[k] else mo["counter_clearance"])
             c = self.clearance(side, plan.arm[k], plan.hand[k])
             if c < need - 2e-3:
                 name = next(n for n, s, e in phases if s <= k < e)

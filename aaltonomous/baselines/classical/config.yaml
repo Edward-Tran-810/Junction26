@@ -135,7 +135,18 @@ perception:
     fragment_radius: 0.045    # object of the same colour, is a piece of that object (dropped)
 
 grasp:
-  # Grasp = "claw from above": palm faces the counter (approach axis = palm -y on the LEFT hand, mirrored right),
+  # >>> OFFICIAL STRATEGY (project decision 2026-11-14): SIDE GRASP ONLY. The palm normal is horizontal and points at the
+  # object from the hand's own side, fingers forward, index/middle stacked vertically, pinch = thumb vs the LOWER finger,
+  # object at its mid-height. The planner refuses any grasp whose lowest hand point would be below the counter and reports
+  # the measured clearance (see grasp.side). The legacy top-down claw documented below is DISABLED: it is only reachable with
+  # mode: topdown AND AALTO_ALLOW_LEGACY_TOPDOWN=1 (reproducing old evidence), never as a silent fallback.
+  mode: side
+  side:
+    approach_dist: 0.08         # m: pre-grasp point = grasp point moved back along the palm normal
+    lateral: 0.014              # m: object centre below the hand centre line (thumb at the centre line, pinch finger 28.5 mm below it)
+    min_clearance: 0.003        # m: lowest hand point (closed AND preshape posture) above the counter required at the grasp
+    diagnostic_ignore_table: false   # DIAGNOSTIC ONLY (physical test of an infeasible grasp): skips the table checks. NEVER for scoring.
+  # (legacy) Grasp = "claw from above": palm faces the counter (approach axis = palm -y on the LEFT hand, mirrored right),
   # fingers point roughly forward and curl down in front of the object, the thumb swings in from behind.
   # Object centre in the LEFT palm frame; auto = midway finger tips <-> thumb tip (`closed`). The Dex3 index/middle
   # tips are 57 mm apart (URDF): centred between them (auto) a 45 mm object wedges between the two fingers and is

@@ -1,0 +1,10 @@
+{
+  "note": "Replace each null with [u,v] from one image. Keys name STL corners, NOT image top-left order. Each corner must be correctly associated. Verify camera calibration and undistort image first.",
+  "pixel_corners": {
+    "minus_x_minus_y": null,
+    "plus_x_minus_y": null,
+    "plus_x_plus_y": null,
+    "minus_x_plus_y": null
+  },
+  "observed_hole_pixels_optional": {}
+}

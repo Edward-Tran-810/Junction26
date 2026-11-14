@@ -55,6 +55,7 @@ class ArmKinematics:
         self.offset = {"left": p, "right": p * mirror}
         a = np.asarray(cfg["grasp"]["approach_axis_in_palm"], float)
         self.axis = {"left": a / np.linalg.norm(a), "right": a * mirror / np.linalg.norm(a)}
+        self.approach_dir = DOWN.copy()   # world direction the palm approach axis must point to: DOWN = legacy top-down, a horizontal vector = side grasp
         self.hint = np.asarray(cfg["grasp"].get("finger_hint", [1.0, 0.0, 0.0]), float)
         self.w_hint = float(cfg["grasp"].get("finger_hint_weight", 0.0))
 
@@ -153,7 +154,7 @@ class ArmKinematics:
                 res = [M.translation + r - target]
                 jac = [Jv - _skew(r) @ Jw]
                 if w_o > 0:
-                    res += [w_o * (a - DOWN), self.w_hint * w_o * np.cross(f, self.hint)]
+                    res += [w_o * (a - self.approach_dir), self.w_hint * w_o * np.cross(f, self.hint)]
                     jac += [-w_o * _skew(a) @ Jw, self.w_hint * w_o * _skew(self.hint) @ _skew(f) @ Jw]
                 if w_reg > 0:
                     res.append(w_reg * (x - q_start))
@@ -172,7 +173,7 @@ class ArmKinematics:
             q7 = run(q7)
         arm[sl] = q7
         p, a = self.grasp_pose(side, arm)
-        tilt = float(np.arccos(np.clip(a @ DOWN, -1.0, 1.0)))
+        tilt = float(np.arccos(np.clip(a @ self.approach_dir, -1.0, 1.0)))
         return q7, float(np.linalg.norm(target - p)), tilt
 
     def _dls(self, side, target, q7, arm_q_full, w_o):
@@ -194,7 +195,7 @@ class ArmKinematics:
             p = M.translation + r
             a = M.rotation @ self.axis[side]
             e_p = target - p
-            e_o = np.cross(a, DOWN)
+            e_o = np.cross(a, self.approach_dir)
             J6 = pin.computeFrameJacobian(self.model, self.data, q, fid, pin.ReferenceFrame.LOCAL_WORLD_ALIGNED)[:, iv]
             Jv, Jw = J6[:3], J6[3:]
             Jp = Jv - _skew(r) @ Jw
@@ -217,7 +218,7 @@ class ArmKinematics:
             q7 = np.clip(q7 + dq, lo, hi)
         arm[sl] = q7
         p, a = self.grasp_pose(side, arm)
-        tilt = float(np.arccos(np.clip(a @ DOWN, -1.0, 1.0)))
+        tilt = float(np.arccos(np.clip(a @ self.approach_dir, -1.0, 1.0)))
         return q7, float(np.linalg.norm(target - p)), tilt
 
 
