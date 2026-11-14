@@ -259,6 +259,16 @@ rl_limits:
   hand_gain: 0.5              # scale on the 7 hand residuals (1.0 = as trained)
   thumb0_max: 0.05            # rad, limit on the thumb_0 residual (sideways swing towards the index/middle gap)
 
+# SHAPE_INSERT placement mode (rung 3, planner.plan_insert; geometry from scene.lid_holes via insertion.py)
+insert:
+  pre_gap: 0.02               # m: object bottom above the lid top at the pre-insertion pose
+  end_gap: 0.002              # m: object bottom above the lid UNDERSIDE when released (3 mm lid: it is through the hole)
+  carry_above_pre: 0.04       # m: carry height above the pre-insertion pose
+  insert_vel: 0.15            # rad/s: the final descent through the hole
+  hint_weight: 3.0            # IK weight of the finger-direction hint while turning the object
+  yaw_tol_deg: 3.0            # plan rejected when the achieved wrist yaw misses the needed turn by more than this
+  verify_load: true           # release check in `open`, camera re-look afterwards (policy)
+
 policy:
   max_attempts: 2             # same object re-detected after this many tries -> skip it
   same_object_radius: 0.03

@@ -161,6 +161,41 @@ def evaluate(a):
     env = AaltoEnv(backend="sim", task=a.task, seed=a.seed, time_limit=a.time_limit, realtime=True,
                    img_server_ip=a.host, head_rgbd=not a.no_head_rgbd,
                    head_rgbd_port=int(os.environ.get("AALTO_RGBD_PORT", "55560")), cameras=not a.no_cameras)
+    # ---- demo options (local overrides of the env, nothing on disk changes)
+    L = env.scene.cfg["layout"]
+    if a.min_spacing:
+        L["min_spacing"] = float(a.min_spacing)
+    if a.n_objects:
+        L["n_cubes"] = [int(a.n_objects), int(a.n_objects)]
+    if a.instruction:
+        if not a.mapping:
+            raise SystemExit("--instruction needs --mapping red=right,yellow=left,blue=center (the INTENDED mapping used for scoring)")
+        gt = dict(kv.split("=") for kv in a.mapping.split(","))
+        env.fixed_instruction = a.instruction
+        _reset = env.reset
+        def _reset_gt():
+            o = _reset()
+            env.mapping = dict(gt)           # scoring uses the intended mapping, never the parser's output
+            return o
+        env.reset = _reset_gt
+    if a.shapes:
+        order = a.shapes.split(",")
+        _reset2 = env.reset
+        def _reset_shapes():
+            from aaltonomous.interface import tasks as _t
+            _orig = _t.sample_layout
+            def _sl(*aa, **kk):
+                cubes = _orig(*aa, **kk)
+                for i, c in enumerate(cubes):
+                    c["shape"] = order[i % len(order)]
+                return cubes
+            import aaltonomous.interface.env as _e
+            _e.sample_layout = _sl
+            try:
+                return _reset2()
+            finally:
+                _e.sample_layout = _orig
+        env.reset = _reset_shapes
     cm, client = None, None
     trials = []
     stop = threading.Event()
@@ -319,6 +354,11 @@ def main(argv=None):
     ap.add_argument("--gate-min-hz", type=float, default=27.0)
     ap.add_argument("--no-head-rgbd", action="store_true", help="head_rgb from teleimager instead of :55560")
     ap.add_argument("--no-cameras", action="store_true", help="no teleimager (wrist cams blank); oracle runs")
+    ap.add_argument("--instruction", default=None, help="demo: fixed instruction text (needs --mapping)")
+    ap.add_argument("--mapping", default=None, help="demo: intended colour=bin pairs for scoring, e.g. red=right,yellow=left,blue=center")
+    ap.add_argument("--min-spacing", type=float, default=None, help="demo: minimum object spacing (m), default scene.yaml")
+    ap.add_argument("--n-objects", type=int, default=None, help="demo: exact number of objects")
+    ap.add_argument("--shapes", default=None, help="demo: comma list of shapes assigned to the objects in order")
     ap.add_argument("--video", action="store_true", help="also write episode_NNN.mp4 (head camera, one frame per tick)")
     ap.add_argument("-v", "--verbose", action="store_true")
     a = ap.parse_args(argv)

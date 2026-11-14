@@ -144,6 +144,17 @@ class Scene:
         z = float(self.cfg["bins"]["wall_height"])
         return z, z + float(self.cfg["lid"]["thickness"])
 
+    @property
+    def lid_rotate_deg(self):
+        """Lid orientation on its box: 0 = layout of the published mesh (holes on the bin's far half), 180 = turned
+        around (holes on the near half = inside the arms' reach; measured, see GRASP_FIXES.md). scene.yaml
+        lid.rotate_deg or $AALTO_LID_ROT_DEG; the sim (aalto_task/scene_cfg.lid_cfg) and the scorer read this one value."""
+        import os
+        v = int(float(os.environ.get("AALTO_LID_ROT_DEG", self.cfg["lid"].get("rotate_deg", 0))))
+        if v not in (0, 180):
+            raise ValueError(f"lid rotate_deg must be 0 or 180, got {v}")
+        return v
+
     def lid_holes(self):
         """[{shape, center (mat xy), poly (N,2 mat xy)}]: hole = shape outline grown by hole_clearance/2 per side.
         Layout (mat axes): circle and square side by side on the bin's far (+y) half, triangle (apex towards the robot,
@@ -162,6 +173,8 @@ class Scene:
         apex = yt - 2 * a["triangle"]
         holes = [("cylinder", (cx - xs, cy + yu), 0.0), ("cube", (cx + xs, cy + yu), 0.0),
                  ("triangle", (cx, cy + yt), np.pi)]                # rot pi: apex towards -y
+        if self.lid_rotate_deg == 180:   # lid turned 180 deg about its centre (holes in the near half of the box)
+            holes = [(k, (2 * cx - p[0], 2 * cy - p[1]), rot + np.pi) for k, p, rot in holes]
         if apex < -H + m or 2 * xs - a["cube"] - a["cylinder"] < g:
             raise ValueError("lid holes do not fit: reduce objects.size or hole_clearance")
         return [{"shape": k, "center": np.array(p, float),

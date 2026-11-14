@@ -92,6 +92,7 @@ class ClassicalPolicy:
         else:
             self.mapping = dict(FIXED_MAPPING)
         self.planner.mapping = self.mapping
+        self.insert_mode = info.get("task") == "insert_shapes"     # rung 3: SHAPE_INSERT placement (planner.plan_insert)
         self.planner.drop_count = {}  # objects released per bin this episode (planner grasp.drop_spread variant)
         self.planner.hint_shift = 0
         if getattr(self, "monitor", None) is not None:      # (absent on objects built without __init__: tests)
@@ -257,7 +258,16 @@ class ClassicalPolicy:
             if n >= self.cfg["policy"]["max_attempts"]:
                 continue
             cands.append(d)
-        if self.cfg["policy"]["order"] == "nearest_bin":
+        if self.insert_mode:                       # nearest to its own hole first; unknown shape = no hole = skip
+            if self.planner.insert is None:
+                from .insertion import InsertGeometry
+                self.planner.insert = InsertGeometry(self.scene)
+            hole = self.planner.insert.hole_for
+            cands = [d for d in cands if hole(getattr(d, "shape", None)) is not None]
+            cands.sort(key=lambda d: float(np.linalg.norm(d.top[:2] - hole(d.shape).centre)))
+            def key(d):
+                return 0.0
+        elif self.cfg["policy"]["order"] == "nearest_bin":
             def key(d):
                 b = target_bin(self.mapping, d.color, getattr(d, "shape", None))
                 return np.inf if b is None else np.linalg.norm(d.top[:2] - self.planner.bin_xy(b))
@@ -269,7 +279,10 @@ class ClassicalPolicy:
             others = [o.top[:2] for o in dets if o is not d]
             r = self.cfg["policy"]["same_object_radius"]
             self.planner.hint_shift = sum(c for q, c in self.attempts if np.linalg.norm(d.top[:2] - q) < r)
-            p = self.planner.plan(d, self.arm_cmd, self.hand_cmd, obstacles=others)
+            if self.insert_mode:
+                p = self.planner.plan_insert(d, self.arm_cmd, self.hand_cmd)
+            else:
+                p = self.planner.plan(d, self.arm_cmd, self.hand_cmd, obstacles=others)
             p.det = d
             self.plans.append(p)
             if p.ok:

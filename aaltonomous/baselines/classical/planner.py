@@ -24,6 +24,7 @@ from aaltonomous.interface.safety import JointSpec, SafetyConfig, SafetyFilter
 from aaltonomous.interface.tasks import FIXED_MAPPING
 
 from . import grasp_select
+from .insertion import InsertGeometry
 from .instruction import target_bin
 from .kinematics import ArmKinematics
 
@@ -117,6 +118,8 @@ class Planner:
         self.dt = dt
         self.height = float(cfg["perception"].get("object_height") or scene.object_height())
         self.mapping = mapping or dict(FIXED_MAPPING)  # sort_fixed: fixed colour -> bin position
+        self.insert = None                             # InsertGeometry, built on first use (rung 3)
+        self._lid_thick = 0.0                          # raised rim of the lid bin while planning an insertion
         gs = cfg["grasp"].get("select") or {}
         self.select_cfg = gs if gs.get("enabled") else None
         self.hand_geom = grasp_select.hand_geometry(self.kin, postures, gs.get("pad_width", 0.018)) if self.select_cfg else None
@@ -171,9 +174,10 @@ class Planner:
         pm = self.scene.pelvis_to_mat(pts)
         b = self.scene.cfg["bins"]
         half = np.asarray(b["outer_size"], float) / 2 + margin
-        rim = self.scene.counter_z + float(b["wall_height"])
+        rim0 = self.scene.counter_z + float(b["wall_height"])
         out = np.inf
-        for c in b["centers"].values():
+        for name, c in b["centers"].items():
+            rim = rim0 + (self._lid_thick if name == self.scene.lid_bin else 0.0)   # lid plate on the lid bin (insert plans)
             over = np.all(np.abs(pm[:, :2] - np.asarray(c, float)) <= half, axis=1)
             if over.any():
                 out = min(out, float((pts[over, 2] - rim).min()))
@@ -355,6 +359,30 @@ class Planner:
             last = p
             last.reason = f"{side} cannot place at ({spot[0]:+.2f},{spot[1]:+.2f}): {p.reason}"
         return last
+    # ------------------------------------------------------------------ SHAPE_INSERT placement mode
+    def plan_insert(self, det, arm_q, hand_q):
+        """Plan pick -> through the matching lid hole -> release (rung 3). Placement mode SHAPE_INSERT: the target is the
+        hole's pose from scene geometry (insertion.InsertGeometry), never the NORMAL_SORT drop point / drop_spread.
+        Returns the first valid Plan (nearer arm first), else the last failure; unknown shape -> not ok (re-look)."""
+        if self.insert is None:
+            self.insert = InsertGeometry(self.scene)
+        shape = getattr(det, "shape", None)
+        hole = self.insert.hole_for(shape)
+        if hole is None:
+            return Plan(False, color=det.color, reason=f"no matching hole for shape {shape!r} (shape unknown: re-look)")
+        sides = ("left", "right") if hole.centre[1] >= 0 else ("right", "left")
+        last = None
+        self._lid_thick = float(self.scene.cfg["lid"]["thickness"])
+        try:
+            for side in sides:
+                p = self._plan_side_hints(det, side, self.scene.lid_bin, np.asarray(arm_q, float), np.asarray(hand_q, float), insert=hole)
+                if p.ok:
+                    return p
+                last = last if last is not None and last.reason else p
+        finally:
+            self._lid_thick = 0.0
+        return last
+
     def _plan_side_hints(self, det, side, bin_name, arm_q, hand_q, **kw):
         """_plan_side with each finger direction of grasp.finger_hints in turn (fingers forward can reach over the
         centre bin's wall when the object is close to it; then fingers inward/sideways). VARIANT `grasp.face_align`
@@ -430,7 +458,7 @@ class Planner:
         finally:
             self.kin.hint = saved
 
-    def _plan_side(self, det, side, bin_name, arm_q, hand_q, place_xy=None):
+    def _plan_side(self, det, side, bin_name, arm_q, hand_q, place_xy=None, insert=None):
         """VARIANT `grasp.per_shape.<shape>` (needs det.shape): {point_in_palm, height_frac, preshape, closed (posture
         names in `hand`), close_hold_s, lift_vel} for that shape only."""
         ps = dict((self.cfg["grasp"].get("per_shape") or {}).get(getattr(det, "shape", None)) or {})
@@ -445,17 +473,19 @@ class Planner:
             self.kin.offset = {"left": p, "right": p * np.array([1.0, -1.0, 1.0])}
             ps.setdefault("height_frac", sel["height_frac"])
         try:
-            plan = self._plan_side_impl(det, side, bin_name, arm_q, hand_q, place_xy, ps)
-            plan.grasp = sel or {}
+            plan = self._plan_side_impl(det, side, bin_name, arm_q, hand_q, place_xy, ps, insert)
+            plan.grasp = {**(sel or {}), **(plan.grasp or {})}
             return plan
         finally:
             self.kin.offset = saved
 
-    def _plan_side_impl(self, det, side, bin_name, arm_q, hand_q, place_xy, ps):
+    def _plan_side_impl(self, det, side, bin_name, arm_q, hand_q, place_xy, ps, insert=None):
         cfg, g, mo = self.cfg, self.cfg["grasp"], self.cfg["motion"]
         sc, zc = self.scene, self.scene.counter_z
-        plan = Plan(False, side=side, color=det.color, target_bin=bin_name if place_xy is None else "counter")
+        plan = Plan(False, side=side, color=det.color,
+                    target_bin="lid" if insert is not None else (bin_name if place_xy is None else "counter"))
         sl = ArmKinematics.sl(side)
+        self._side_cur = side
         shape = getattr(det, "shape", None)
         H, post = (self.scene.object_height(shape) if shape else self.height), self.post   # this object's own height
         hand_pre = hand_q.copy(); hand_pre[sl] = post[ps.get("preshape", "preshape")][sl]
@@ -488,8 +518,23 @@ class Planner:
         bxy = self.drop_xy(bin_name)
         if place_xy is not None:  # relocation: put it down on the counter (release just above the grasp height)
             bxy, z_drop = np.asarray(place_xy, float), z + 0.005
+        ic = cfg.get("insert") or {}
+        delta, h_turn = 0.0, None
+        if insert is not None:                      # SHAPE_INSERT: target = the hole's pose, no drop spreading
+            gm = self.insert
+            if insert.shape != "cylinder":
+                if getattr(det, "yaw", None) is None:
+                    plan.reason = "object yaw unknown: cannot align it with the hole"
+                    return plan
+                delta = gm.align_delta(insert.shape, float(det.yaw))
+            bxy = np.asarray(insert.centre, float)
+            z_pre = gm.lid_top_z + H / 2 + float(ic.get("pre_gap", 0.02))          # object bottom this far above the lid
+            z_drop = gm.lid_under_z + H / 2 + float(ic.get("end_gap", 0.002))      # object bottom at the lid underside
+            z_carry = max(z_carry, z_pre + float(ic.get("carry_above_pre", 0.04)))
         P = {"pregrasp": np.r_[xy, max(z + g["approach_height"], z_carry)], "grasp": np.r_[xy, z], "lift": np.r_[xy, z_carry],
              "above_bin": np.r_[bxy, z_carry], "drop": np.r_[bxy, z_drop], "retreat": np.r_[bxy, z_drop + g["retreat_up"]]}
+        if insert is not None:
+            P["pre"] = np.r_[bxy, z_pre]
 
         q_pre, ok = self._ik(side, P["pregrasp"], qg, "pregrasp", plan)  # same IK branch as the grasp
         if not ok:
@@ -498,10 +543,37 @@ class Planner:
         plan.waypoints["grasp"] = np.r_[xy, z]
         down = self._cartesian(side, P["pregrasp"], P["grasp"], q_pre, "descend", plan)
         up = down and self._cartesian(side, P["grasp"], P["lift"], down[-1], "lift", plan)
-        carry = up and (self._cartesian(side, P["lift"], P["above_bin"], up[-1], "carry", plan)
-                        or self._joint_carry(side, up[-1], P["lift"], P["above_bin"], z_drop, "carry", plan))
-        lower = carry and self._cartesian(side, P["above_bin"], P["drop"], carry[-1], "lower", plan)
-        retreat = lower and self._cartesian(side, P["drop"], P["retreat"], lower[-1], "retreat", plan)
+        q_turn = ins_q = None
+        saved_hint = (self.kin.hint, self.kin.w_hint)
+        try:
+            if insert is not None and up and abs(delta) > 1e-4:
+                # turn the held object about the vertical by exactly what the hole needs: rotate the finger-direction
+                # hint, solve at lift height with a strong hint weight, then CHECK the achieved wrist yaw
+                yaw0 = self._palm_yaw(up[-1])
+                c, s_ = np.cos(delta), np.sin(delta)
+                h0 = np.asarray(self.kin.hint, float)
+                self.kin.hint = np.array([c * h0[0] - s_ * h0[1], s_ * h0[0] + c * h0[1], h0[2]])
+                self.kin.w_hint = float(ic.get("hint_weight", 3.0))
+                q_turn, ok = self._ik(side, P["lift"], up[-1], "turn", plan)
+                got = (self._palm_yaw(q_turn) - yaw0 + np.pi) % (2 * np.pi) - np.pi
+                err = np.degrees(abs((got - delta + np.pi) % (2 * np.pi) - np.pi))
+                plan.ik["turn"] = (ok, plan.ik["turn"][1], plan.ik["turn"][2])
+                plan.grasp = dict(plan.grasp or {}, turn_deg=float(np.degrees(delta)), turn_err_deg=float(err))
+                if not ok or err > float(ic.get("yaw_tol_deg", 3.0)):
+                    plan.reason = f"cannot turn the object {np.degrees(delta):+.0f} deg for the hole (wrist yaw off by {err:.1f} deg)"
+                    return plan
+                up = up + [q_turn]
+            carry = up and (self._cartesian(side, P["lift"], P["above_bin"], up[-1], "carry", plan)
+                            or self._joint_carry(side, up[-1], P["lift"], P["above_bin"], z_drop, "carry", plan))
+            if insert is not None:
+                lower = carry and self._cartesian(side, P["above_bin"], P["pre"], carry[-1], "lower", plan)
+                ins_q = lower and self._cartesian(side, P["pre"], P["drop"], lower[-1], "insert", plan)
+                retreat = ins_q and self._cartesian(side, P["drop"], P["retreat"], ins_q[-1], "retreat", plan)
+            else:
+                lower = carry and self._cartesian(side, P["above_bin"], P["drop"], carry[-1], "lower", plan)
+                retreat = lower and self._cartesian(side, P["drop"], P["retreat"], lower[-1], "retreat", plan)
+        finally:
+            self.kin.hint, self.kin.w_hint = saved_hint
         if not retreat:
             plan.reason = plan.reason or f"IK failed on {[k for k, v in plan.ik.items() if not v[0]]} ({side})"
             return plan
@@ -544,8 +616,14 @@ class Planner:
         move("to_pregrasp", [q_pre], hand_to=hand_pre)
         move("descend", down)
         hand("close", hand_cls, float(ps.get("close_hold_s", mo["close_hold_s"])))
-        move("lift", up, v=ps.get("lift_vel", mo.get("lift_vel")))   # VARIANT (per_shape.)lift_vel, null = arm_max_vel
+        if q_turn is not None:
+            move("lift", up[:-1], v=ps.get("lift_vel", mo.get("lift_vel")))
+            move("turn", [q_turn])
+        else:
+            move("lift", up, v=ps.get("lift_vel", mo.get("lift_vel")))   # VARIANT (per_shape.)lift_vel, null = arm_max_vel
         move("carry", carry + lower)
+        if ins_q is not None:        # slow final descent through the hole
+            move("insert", ins_q, v=float(ic.get("insert_vel", 0.15)))
         hand("open", hand_rel, mo["open_hold_s"])  # widest posture: `open` alone left the cube wedged in the sim
         move("retreat", retreat)
         move("home", [home], hand_to=hand_open)
@@ -586,6 +664,12 @@ class Planner:
             return plan
         plan.ok = True
         return plan
+
+    def _palm_yaw(self, arm_q):
+        """Horizontal direction (rad, pelvis frame) of the palm x axis = the finger direction, for a full arm_q."""
+        self.kin._fk(arm_q)
+        x = self.kin.data.oMf[self.kin.palm[self._side_cur]].rotation[:, 0]
+        return float(np.arctan2(x[1], x[0]))
 
     def dry_run_safety(self, arm_q, hand_q, arm, hand):
         f = SafetyFilter(self.spec, self.safety)
