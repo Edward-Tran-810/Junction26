@@ -376,7 +376,7 @@ PHRASES = [
     (r"\bnothing\b", " not "),
     # self-corrections: what follows overrides what came before
     (r"\b(?:no,? wait|wait,? no|no no|sorry,? i mean|i meant to say|i meant|i mean|scratch that|make that|"
-     r"correction|or rather|let me correct that|oops|on second thought|actually,? no)\b", " , __correct__ , "),
+     r"correction|or rather|let me correct that|oops|on second thought|actually,? no|actually)\b", " , __correct__ , "),
     # "yellow goes where blue would normally go": the default stated before, not the final mapping
     (r"\b(?:wherever|where) (?:the )?(\w+)(?: ones| objects| items| pieces| things| blocks)? (?:would |should |will )?"
      r"(?:normally|usually|typically|ordinarily|otherwise) (?:go|goes|be|end up|land)\b", r" __sameasdflt_\1__ "),
@@ -1262,6 +1262,13 @@ class _Parser:
                     if last_chunk is not None and last_chunk.excl and not last_chunk.sels and not ch.pron:
                         pass
                     self.add(antecedent, t.bin, [], ch.regardless)
+                    last_rule_chunk = last_chunk = ch
+                    continue
+                # "blue in the middle box and ALSO in the right box": one colour, two bins, no correction -> a conflict
+                # (same epoch, same specificity -> unmapped by _best), not a silent pick of the first bin.
+                if ("also" in ch.toks or ch.too) and last_chunk is last_rule_chunk and last_chunk is not None \
+                        and last_chunk.sels and last_chunk.pos_tgts and t.bin in BINS and not ch.neg_tgts and not correcting:
+                    self.add(last_chunk.sels, t.bin, [], ch.regardless)
                     last_rule_chunk = last_chunk = ch
                     continue
                 pend_t = t
