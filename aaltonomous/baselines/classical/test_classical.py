@@ -207,3 +207,92 @@ class TestEpisode(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestInstruction(unittest.TestCase):
+    """Rung-2 instruction parser (instruction.py) and how the policy uses its mapping."""
+
+    def test_every_training_template_and_the_fixed_sentence(self):
+        from .loop.lang.eval_lang import judge, template_rows
+        from .instruction import parse_instruction
+        bad = [r["text"] for r in template_rows() if judge(parse_instruction(r["text"]), r["gt"])[0] != "exact"]
+        self.assertEqual(bad, [])
+
+    def test_frozen_regression_set(self):
+        from .loop.lang import eval_lang
+        reg = eval_lang.HERE / "regression.jsonl"
+        if not reg.exists():
+            self.skipTest("no regression.jsonl yet")
+        from .instruction import parse_instruction
+        bad = [r["text"] for r in eval_lang.load(reg) if eval_lang.judge(parse_instruction(r["text"]), r["gt"])[0] != "exact"]
+        self.assertEqual(bad, [])
+
+    def test_shape_dependent_colour_is_left_when_shape_unknown(self):
+        from .instruction import parse_instruction, target_bin
+        m = parse_instruction("Red cubes go left, all other red things go right, yellow and blue in the middle.")
+        self.assertEqual(target_bin(m, "red", "cube"), "left")
+        self.assertEqual(target_bin(m, "red", "triangle"), "right")
+        self.assertIsNone(target_bin(m, "red"))            # vision without shape: never guess
+        self.assertEqual(target_bin(m, "blue"), "center")
+
+    def test_unknown_colour_never_falls_through_to_default(self):
+        from .instruction import target_bin
+        m = {"red": "left", "default": "right"}
+        self.assertIsNone(target_bin(m, None, "cube"))      # could be red (left) or not (right): never guess
+        self.assertIsNone(target_bin(m, None))
+        self.assertEqual(target_bin({"cube": "left", "default": "right"}, None, "cube"), "left")   # shape decides
+        self.assertEqual(target_bin({"default": "center"}, None, None), "center")                  # all agree
+
+    def test_unclear_parts_stay_unmapped(self):
+        from .instruction import parse_instruction
+        m = parse_instruction("Red in the xyz bin, yellow left, blue right.")
+        self.assertEqual(m, {"yellow": "left", "blue": "right"})
+        self.assertEqual(parse_instruction("Leave the blue ones on the counter, the rest go right."),
+                         {"red": "right", "yellow": "right"})
+
+    def test_policy_mapping_sources(self):
+        from aaltonomous.interface.tasks import FIXED_MAPPING
+        pol = ClassicalPolicy.__new__(ClassicalPolicy)   # reset() only touches the planner's mapping
+        pol.planner = type("P", (), {})()
+        pol.time_limit = 120.0
+        pol.reset({"instruction": "Blue goes left, the rest in the right bin.", "task": "sort_language"})
+        self.assertEqual(pol.mapping, {"red": "right", "yellow": "right", "blue": "left"})
+        pol.reset({"instruction": "Blue goes left, the rest in the right bin.", "task": "sort_fixed"})
+        self.assertEqual(pol.mapping, FIXED_MAPPING)
+        pol.reset({"instruction": "gibberish", "task": "sort_language"})
+        self.assertEqual(pol.mapping, {})                  # not the fixed mapping: nothing is guessed
+        pol.reset({"mapping": {}})
+        self.assertEqual(pol.mapping, {})
+
+    def test_swaps_and_double_negatives(self):
+        from .instruction import parse_instruction
+        self.assertEqual(parse_instruction("Do the usual sorting, but switch the yellow and the blue."),
+                         {"red": "left", "yellow": "right", "blue": "center"})
+        self.assertEqual(parse_instruction("Red left, yellow middle, blue right, then reverse everything."),
+                         {"red": "right", "yellow": "center", "blue": "left"})       # reverse = mirror left/right
+        self.assertEqual(parse_instruction("Red left, yellow middle, blue right, then rotate them."), {})  # unreadable
+        self.assertEqual(parse_instruction("Never leave a blue object on the table; blue belongs in the left bin."),
+                         {"blue": "left"})
+        self.assertEqual(parse_instruction("No yellow in the right bin: yellow goes in the centre."),
+                         {"yellow": "center"})
+
+
+class TestReLook(unittest.TestCase):
+    """A5 self-check with known truth: the post-place re-look reports where the picked object went."""
+
+    def _episode(self, attach):
+        from .loop.closed_loop import instructions, run_episode
+        item = next(i for i in instructions() if i["kind"] == "template")
+        return run_episode(501, item, attach_radius=attach, time_limit=60.0)
+
+    def test_missed_grasp_is_seen_on_the_counter(self):
+        r = self._episode(0.0)                     # the mock hand never holds anything
+        self.assertTrue(r["place_checks"])
+        self.assertTrue(all(c["outcome"] == "still_on_counter" for c in r["place_checks"]), r["place_checks"])
+        self.assertTrue(all(o == "counter" for o in r["outcomes"]), r["outcomes"])
+
+    def test_successful_place_leaves_the_counter(self):
+        r = self._episode(0.04)
+        self.assertTrue(r["place_checks"])
+        self.assertTrue(all(c["outcome"] == "left_counter" for c in r["place_checks"]), r["place_checks"])
+        self.assertEqual(r["score"], r["max_score"])

@@ -124,6 +124,21 @@ class Renderer:
         nz = np.where(t == tcap, 1.0, 0.0)
         self._write(rgb, zb, win, np.isfinite(t), t, nz, col)
 
+    def _prism(self, rgb, zb, center, yaw, hz, col):
+        """Equilateral triangular prism (scene.yaml triangle) at pelvis yaw `yaw` (ray / convex-solid clipping)."""
+        from .loop.vision.synth import intersect_convex, prism_planes
+        from .shape_fit import outline
+        poly = outline(self.scene, "triangle", yaw) + np.asarray(center)[:2]
+        planes = prism_planes(poly, center[2] - hz, center[2] + hz)
+        r = self.scene.object_dims("triangle")["circumradius"]
+        win = self._pixels(center, np.eye(3), np.array([r, r, hz]))
+        if win is None:
+            return
+        t, k = intersect_convex(self.o, self.rays[win].reshape(-1, 3), planes)
+        t, k = t.reshape(self.rays[win].shape[:2]), k.reshape(self.rays[win].shape[:2])
+        nz = np.abs(planes[k, 2])
+        self._write(rgb, zb, win, np.isfinite(t), t, nz, col)
+
     @staticmethod
     def _write(rgb, zb, win, hit, t, nz, col):
         z = zb[win]
@@ -144,7 +159,9 @@ class Renderer:
             s, h = ob["size"], ob.get("height", ob["size"])
             if ob.get("shape", "cube") in ("cylinder", "circle"):
                 self._cylinder(rgb, zb, ob["pos"], s / 2, h / 2, col)
-            else:  # cube; triangle prisms are drawn as their bounding box (a blob is a blob for this baseline)
+            elif ob.get("shape") == "triangle":  # exact prism; layout (mat) yaw -> pelvis yaw as in the Isaac task
+                self._prism(rgb, zb, ob["pos"], -np.pi / 2 - ob.get("yaw", 0.0), h / 2, col)
+            else:  # cube
                 self._box(rgb, zb, ob["pos"], _yaw_R(ob.get("yaw", 0.0)), np.array([s / 2, s / 2, h / 2]), col)
         depth = np.where(np.isfinite(zb), zb * 1000.0, 0.0)
         if rng is not None and depth_noise_mm > 0:
@@ -222,16 +239,17 @@ class RenderMockBackend(MockBackend):
         return out
 
     def outcomes(self, mapping):
-        return [self.scene.classify_cube(o["pos"], 0.0, o["color"], mapping) for o in self.objects]  # colour rule (rung 1)
+        return [self.scene.classify_cube(o["pos"], 0.0, o["color"], mapping, shape=o.get("shape"))
+                for o in self.objects]
 
 
-def make_mock_env(scene_path=None, seed=0, cfg=None, realtime=False, **backend_kw):
+def make_mock_env(scene_path=None, seed=0, cfg=None, realtime=False, task="sort_fixed", **backend_kw):
     """AaltoEnv(backend="mock") with the render/grasp mock backend. scene_path overrides scene.yaml."""
     from aaltonomous.interface.env import AaltoEnv
     from .config import hand_postures, load_config
     from .kinematics import ArmKinematics
     cfg = cfg or load_config()
-    env = AaltoEnv(backend="mock", task="sort_fixed", seed=seed, realtime=realtime)
+    env = AaltoEnv(backend="mock", task=task, seed=seed, realtime=realtime)
     if scene_path is not None:
         env.scene = Scene.load(scene_path)
     env.backend = RenderMockBackend(env.scene, Calibration.load(), ArmKinematics(cfg), hand_postures(cfg),

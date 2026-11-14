@@ -23,6 +23,7 @@ import numpy as np
 from aaltonomous.interface.safety import JointSpec, SafetyConfig, SafetyFilter
 from aaltonomous.interface.tasks import FIXED_MAPPING
 
+from .instruction import target_bin
 from .kinematics import ArmKinematics
 
 
@@ -46,12 +47,12 @@ class Plan:
 
     def summary(self):
         if not self.ok:
-            return f"{self.color:<6} SKIP ({self.reason})"
+            return f"{str(self.color):<6} SKIP ({self.reason})"
         wp = " ".join(f"{k}=({v[0]:+.2f},{v[1]:+.2f},{v[2]:+.2f})" for k, v in self.waypoints.items()
                       if k in ("grasp", "drop"))
         tilt = max(t for _, _, t in self.ik.values())
         err = max(e for _, e, _ in self.ik.values()) * 1000
-        return (f"{self.color:<6} {self.side:<5} arm -> {self.target_bin} bin  {wp}  IK ok max_err={err:.1f}mm "
+        return (f"{str(self.color):<6} {self.side:<5} arm -> {self.target_bin} bin  {wp}  IK ok max_err={err:.1f}mm "
                 f"max_tilt={tilt:.0f}deg  {self.duration:.1f}s  safety_clips={self.safety_clips}")
 
 
@@ -224,7 +225,7 @@ class Planner:
         the next look re-detects the object there. obstacles: (n, 2) pelvis xy of the other detected objects.
         Returns the first Plan that passes every check, else the last failure."""
         g = self.cfg["grasp"]
-        bin_name = bin_name or self.mapping.get(det.color)
+        bin_name = bin_name or target_bin(self.mapping, det.color, getattr(det, "shape", None))
         by = self.bin_xy(bin_name)[1] if bin_name is not None else 0.0
         ref = by if abs(by) > 0.1 else det.top[1]
         side0 = "left" if ref > g["y_split"] else "right"

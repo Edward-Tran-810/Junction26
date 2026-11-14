@@ -34,6 +34,105 @@ perception:
   object_size: null           # null = scene.yaml objects.size (grasp width)
   xy_offset: [0.0, 0.0]   # pelvis-frame xy added to every detection (head extrinsics correction). TUNE on the robot
   object_height: null         # null = scene.yaml size * height_ratio
+  # ---- v2 pipeline (vision loop 2026-11-14; perception.py docstring, loop/STATE.md). legacy = the 2026-11-11 code.
+  pipeline: v2
+  roi_margin_px: 25          # v2 works full-res only where mat objects can appear (+ margin for camera error)
+  hsv_relaxed:                # used ONLY on pixels that depth puts at object height on the mat, outside the bins
+    red:    [[[0, 45, 35], [10, 255, 255]], [[160, 45, 35], [180, 255, 255]]]
+    yellow: [[[14, 45, 50], [40, 255, 255]]]
+    blue:   [[[90, 45, 30], [135, 255, 255]]]
+  segmenter: geometry         # geometry (v2) | detector | open_vocab (A3 learned candidates, loop/vision/learned.py)
+  detector_weights: aaltonomous/baselines/classical/loop/vision/cache/detector_runs/runs/segment/y11n_seg/weights/best.pt
+  detector_conf: 0.35
+  open_vocab_thr: 0.15
+  seg_shape_min: 0.5          # model shape used only where the depth fit cannot decide, and above this score
+  colour_from: model         # model (segmenter's class label) | hue_cluster (detector + hue hybrid: colour from
+                              # the region's own hue, assigned jointly per frame, see learned.assign_colours)
+  hue:
+    prototypes: scene         # which set below; "scene" = scene.yaml objects.colors converted to hue
+    prototype_sets:
+      scene: null
+      real_drop2: {red: 12.4, yellow: 41.4, blue: 110.0}   # median region hue of the labelled objects in the 16 dev frames of drop 2
+                                                         # (orange / yellow / purple foam blocks), see EXPERIMENTS
+    gap: 10.0                 # OpenCV hue units: neighbouring region hues further apart start a new cluster
+    max_dist: 25.0            # a region further than this from its colour's prototype hue: colour None
+  vlm_verify: false           # A3: VLM second opinion on unsure detections (shape None or colour vote < below)
+  vlm_below_conf: 0.9
+  colour:                     # v2: colour of an object-height region = majority of its coloured (relaxed) pixels
+    min_coloured_px: 40       # fewer coloured pixels (or < min_coloured_frac of the region): not our object
+    min_coloured_frac: 0.1
+    split_frac: 0.25          # 2 colours each >= this share of the coloured pixels = 2 touching objects
+    min_conf: 0.0             # abstain: colour vote share below this -> colour None (A4 sweep chooses it)
+    mode: hsv                 # hsv (relaxed HSV ranges) | wb_proto (A3 v2-colour-invariant: per-frame white
+                              # balance on the known bins, then nearest object-colour hue)
+    wb_gain_max: 1.8          # wb_proto: per-channel gain clip (green = 1); bins carry little blue
+    wb_min_cast: 1.3          # wb_proto: white-balance only if some channel gain is >= this (or <= 1/this)
+    wb_s_min: 70              # wb_proto: corrected saturation / value needed for a colour label
+    wb_v_min: 30
+    wb_max_hue_dist: 25       # OpenCV hue units (0-180)
+    keep_uncoloured: false    # A3 `cloud`: keep object-height regions without colour as color None objects
+    uncoloured_min_iou: 0.8   # ... only with a clear prism fit (else hands / occluders)
+  top_tolerance: 0.004        # m above the known top height (counter + object height): higher = not this top
+  top_search: 0.015          # m below the known top height in which the top face is searched
+  object_px_height: [0.2, 1.5]  # a depth pixel is an object pixel if its height above the counter is in this
+                                # range (object sizes); below = counter surface
+  plane_refine:               # level the counter plane seen in depth (camera pitch / roll / height error)
+    enabled: true
+    stride: 4                 # pixel grid for the fit
+    search_dz: 0.03           # m: points within this of the nominal counter height are plane candidates
+    bin_margin: 0.04          # m: candidates stay this far in front of the bins (their walls are vertical)
+    ransac_iters: 20          # 3-point RANSAC (fixed seed) for the inliers, then least squares
+    inlier_m: 0.003           # m: inlier distance to the plane
+    high_m: 0.012             # points this far above the first (RANSAC) plane mark objects / walls ...
+    high_margin_cells: 2      # ... and plane candidates within this many grid cells of them are dropped
+    min_points: 1500
+    max_tilt_deg: 3.0         # larger corrections are not applied (something else is wrong: report it)
+    max_dz: 0.03
+  bin_refine:                 # camera yaw / x / y from the known bin walls (2D ICP of rim-height depth points)
+    enabled: true             # (uses the plane_refine pixel grid)
+    height_band: 0.008        # m around bins.wall_height
+    search_m: 0.03            # points this far around a bin footprint take part
+    min_points: 150
+    max_points: 350           # thinned to this many rim points (speed)
+    iterations: 5
+    max_rms: 0.004            # m: worse fits are not applied
+    max_yaw_deg: 3.0
+    max_shift: 0.03           # m
+  refine_cache:               # the camera is fixed: estimate plane + bin refinement on an episode's first frame,
+    enabled: true             # reuse it, re-estimate every every_n frames (policy.reset clears it)
+    every_n: 30
+  shape:
+    method: polygon           # polygon (top-face fit; render-and-compare only where a blob has no depth) |
+                              # render (silhouette always) | combined (mean IoU of both). Dev 2026-11-14: polygon
+                              # best (shape 99.9 % vs 97.0 % render), combined = polygon + 11 ms
+    min_top_px: 20            # top-face depth points needed for the polygon fit
+    polygon:
+      min_iou: 0.55
+      min_margin: 0.04
+      shift_mm: 3             # xy search around the top-point centroid (mm)
+      visibility: true        # footprint from per-cell depth look-ups: hidden / no-depth cells = unknown
+      min_known: 0.6          # below this visible share of the best outline the shape is not decided
+      # A2 (2026-11-14, tuned on a2_occl_dev / a2_close_dev, synthetic): a partly hidden outline (visible share
+      # < hidden_vis) is refitted on a larger grid with a wide xy search (the visible part's centroid is off the
+      # centre) and needs a clearer fit before a shape is named (wrong shapes 3+7 -> 0 on dev)
+      hidden_vis: 0.97
+      hidden_margin: 0.08
+      hidden_min_iou: 0.72
+      refit_hidden: {below_vis: 0.97, half_m: 0.056, shift_mm: 14}
+    render: {min_iou: 0.85, min_margin: 0.03}   # used without depth: strict, a wrong shape is worse than None
+    combined: {min_iou: 0.55, min_margin: 0.03}
+    position_from_fit: true   # true: top xy = fitted outline centre; false: footprint-weighted mean of top points
+                              # (the mean is pulled ~1.3 mm towards the camera by near-face points in the top band)
+    reject_below_iou: 0.0     # blobs whose best shape IoU is below this are rejected (0 = off)
+    visibility: {tol_m: 0.004, tol_rel: 0.01}   # top-surface depth match: max(tol_m, tol_rel * depth)
+    min_fit_without_top: 0.5  # frame with depth, blob without a top face: needs this silhouette IoU (else not an
+                              # object: colour fringe in a depth hole / stereo band)
+    split_blobs: true         # a blob whose top-face points form separate groups = several objects
+    split_extent: 0.070       # A2: a connected top face longer than this (one object <= 63.6 mm) = two touching
+                              # same-colour objects: cut at the least dense slice (TopFaceFitter.split_neck)
+    split_restrict: true      # A2: fit each part with the visibility observer, the other part's cells unknown
+    fragment_iou: 0.3         # a blob with best IoU below this, closer than fragment_radius to a well-fitted
+    fragment_radius: 0.045    # object of the same colour, is a piece of that object (dropped)
 
 grasp:
   # Grasp = "claw from above": palm faces the counter (approach axis = palm -y on the LEFT hand, mirrored right),

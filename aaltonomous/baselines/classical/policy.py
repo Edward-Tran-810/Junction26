@@ -29,6 +29,7 @@ from aaltonomous.interface.safety import JointSpec, SafetyConfig
 from aaltonomous.scene.scene import Scene
 
 from .config import hand_postures, home_arm, load_config
+from .instruction import mapping_for_task, target_bin
 from .kinematics import ArmKinematics
 from .perception import Perception
 from .planner import Planner
@@ -57,13 +58,6 @@ class ClassicalPolicy:
         self.safety = safety or SafetyConfig(dt=1.0 / HZ)
         self.perception = Perception(self.cfg, self.scene, self.cal)
         self.planner = Planner(self.cfg, self.scene, self.post, self.home, self.kin, self.safety, self.spec)
-        # Optional RL grasp residual (aaltonomous/rl/skill.py). OFF unless cfg["rl_grasp"] or $AALTO_RL_GRASP
-        # names an exported actor; with it off nothing below changes.
-        rl = self.cfg.get("rl_grasp") or os.environ.get("AALTO_RL_GRASP")
-        self.skill = None
-        if rl:
-            from aaltonomous.rl.skill import GraspSkill
-            self.skill = GraspSkill(rl, self.spec)
         self.require_confirm = require_confirm
         self.threaded = threaded
         if threaded:  # pure-Python planning holds the GIL: hand it back to act() sooner (default 5 ms)
@@ -77,7 +71,15 @@ class ClassicalPolicy:
         if isinstance(info, str):
             info = {"instruction": info}
         info = info or {}
-        self.mapping = info.get("mapping") or dict(FIXED_MAPPING)
+        if getattr(self, "perception", None) is not None:   # new episode: re-estimate the camera correction
+            self.perception.reset_calibration()               # on its first frame (perception.refine_cache)
+        if info.get("mapping") is not None:      # given (oracle / tests); an empty mapping means "sort nothing"
+            self.mapping = dict(info["mapping"])
+        elif info.get("instruction") and info.get("task") != "sort_fixed":
+            # rung 2: parse the text. Unclear parts stay unmapped (left on the counter), never guessed.
+            self.mapping = mapping_for_task(info.get("task"), info["instruction"])
+        else:
+            self.mapping = dict(FIXED_MAPPING)
         self.planner.mapping = self.mapping
         self.time_limit = info.get("time_limit", self.time_limit)
         self.state = "init"
@@ -91,8 +93,12 @@ class ClassicalPolicy:
         self.events = []
         self.plans = []
         self._job = None
+        self._last_place = None
+        self.place_checks = []
         self._decision = None
         self.last_detections = []
+        self._last_place = None     # (grasp xy, colour, shape, target bin, detections before the pick)
+        self.place_checks = []      # A5 re-look: one outcome per executed pick (see _check_last_place)
 
     def confirm(self):
         self._decision = "go"
@@ -112,8 +118,6 @@ class ClassicalPolicy:
             self.hand_cmd = np.clip(np.asarray(obs["hand_q"], float), sp.hand_lower, sp.hand_upper)
         t = float(obs.get("t", 0.0))
         if self.queue_a is not None and len(self.queue_a):
-            if self.skill is not None and self.skill.active:
-                return self.skill.act(self, obs)
             return self._pop()
         if self.state == "init":
             a, h = self.planner.go_to(self.arm_cmd, self.hand_cmd, self.home, self.post["open"])
@@ -185,9 +189,36 @@ class ClassicalPolicy:
         except Exception as e:  # never kill the control loop
             job["result"] = ("error", repr(e))
 
+    def _check_last_place(self, dets):
+        """Re-look after a place (A5): where did the last picked object go?
+          still_on_counter   an object of its colour is still within same_object_radius of the grasp point
+                             (the grasp missed / slipped before lift): the normal loop retries it (max_attempts)
+          dropped_elsewhere  not at the grasp point, but an object of its colour appeared on the counter where none
+                             was before (fell out of the hand during the carry)
+          left_counter       gone from the counter: in a bin (objects in bins are not reported by perception)
+        Returns the outcome string (None if nothing was placed since the last look)."""
+        if self._last_place is None:
+            return None
+        xy, col, shape, bin_name, before = self._last_place
+        self._last_place = None
+        r = self.cfg["policy"]["same_object_radius"]
+        same = [d for d in dets if d.color == col and np.all(np.isfinite(d.top))]
+        if any(np.linalg.norm(d.top[:2] - xy) < r for d in same):
+            out = "still_on_counter"
+        elif any(all(np.linalg.norm(d.top[:2] - b.top[:2]) >= r for b in before if b.color == col) for d in same):
+            out = "dropped_elsewhere"
+        else:
+            out = "left_counter"
+        self.place_checks.append({"color": col, "shape": shape, "bin": bin_name, "xy": [float(v) for v in xy],
+                                  "outcome": out})
+        return out
+
     def _look(self, obs):
         dets = self.perception.detect(obs["head_rgb"], obs["head_depth"])
         self.last_detections = dets
+        chk = self._check_last_place(dets)
+        if chk is not None:
+            self.log(f"[classical] re-look after place: {chk}")
         cands = []
         for d in dets:
             xy = d.top[:2]
@@ -199,7 +230,7 @@ class ClassicalPolicy:
             cands.append(d)
         if self.cfg["policy"]["order"] == "nearest_bin":
             def key(d):
-                b = self.mapping.get(d.color)
+                b = target_bin(self.mapping, d.color, getattr(d, "shape", None))
                 return np.inf if b is None else np.linalg.norm(d.top[:2] - self.planner.bin_xy(b))
         else:
             def key(d):
@@ -240,9 +271,10 @@ class ClassicalPolicy:
     def _start(self, plan, t):
         xy = plan.waypoints["grasp"][:2]
         self.attempts.append((xy, 1))
+        det = getattr(plan, "det", None)
+        self._last_place = (np.asarray(xy, float), plan.color, getattr(det, "shape", None), plan.target_bin,
+                            list(self.last_detections))
         self._enqueue(plan.arm, plan.hand)
-        if self.skill is not None:
-            self.skill.begin(plan, self)
         self.state = "executing"
         self._note(t, f"execute {plan.summary()}")
         return self._pop()

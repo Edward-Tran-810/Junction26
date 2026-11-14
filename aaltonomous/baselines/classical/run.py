@@ -138,9 +138,9 @@ def run(a):
     real = a.backend == "real"
     if a.backend == "mock":
         from .mock_world import make_mock_env
-        env = make_mock_env(a.scene, seed=a.seed, realtime=a.realtime)
+        env = make_mock_env(a.scene, seed=a.seed, realtime=a.realtime, task=a.task)
     else:
-        env = AaltoEnv(backend=a.backend, task="sort_fixed", seed=a.seed, time_limit=a.time_limit,
+        env = AaltoEnv(backend=a.backend, task=a.task, seed=a.seed, time_limit=a.time_limit,
                        network_interface=a.network_interface, img_server_ip=a.img_server_ip,
                        head_rgbd=True, head_rgbd_port=a.head_rgbd_port)
         if a.scene:
@@ -163,7 +163,9 @@ def run(a):
         print(f"head frames -> {d}/")
     try:
         obs = env.reset()  # real: prints the layout card and waits for Enter
-        pol.reset({"instruction": obs["instruction"]})
+        pol.reset({"instruction": obs["instruction"], "task": a.task})
+        if a.task != "sort_fixed":
+            print(f"instruction: {obs['instruction']!r}\nparsed mapping: {pol.mapping}")
         keys = queue.Queue()
         if confirm:
             threading.Thread(target=stdin_reader, args=(keys,), daemon=True).start()
@@ -188,8 +190,10 @@ def run(a):
                 break
         print(f"\nepisode over: {info['end_reason']}  t={info['t']:.1f}s  safety={info.get('safety_summary')}")
         if a.backend == "mock":
-            outc = env.backend.outcomes(pol.mapping)
-            print(f"mock outcomes: {outc}  score={env.scene.score('sort_fixed', outc)}")
+            from aaltonomous.interface.tasks import FIXED_MAPPING
+            truth = env.mapping or dict(FIXED_MAPPING)   # scored on the TRUE mapping, not the policy's parse
+            outc = env.backend.outcomes(truth)
+            print(f"mock outcomes: {outc}  score={env.scene.score(a.task, outc)}")
         return info
     except KeyboardInterrupt:
         print("\ninterrupted: holding last target, closing")
@@ -207,6 +211,9 @@ def main(argv=None):
     ap.add_argument("--config", default=None, help="config yaml (default classical/config.yaml)")
     ap.add_argument("--scene", default=None, help="scene yaml (default scene/scene.yaml)")
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--task", choices=("sort_fixed", "sort_language"), default="sort_fixed",
+                    help="sort_language: random training-template instruction, parsed by instruction.py, scored on the "
+                         "true mapping")
     ap.add_argument("--time-limit", type=float, default=120.0)
     ap.add_argument("--profile", default=None, help="config profile (default: `none` = robot values for --backend "
                     "real, config.yaml `profile:` (sim) otherwise)")

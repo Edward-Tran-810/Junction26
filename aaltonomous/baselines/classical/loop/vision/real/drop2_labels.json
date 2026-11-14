@@ -1,0 +1,22 @@
+{"source": "/workspace/data/real_drops/frames/g1_junction_drop_2 (long, 2026-11-14; LeRobot g1_junction_drop_2, head cam_high, RGB only, no depth)",
+ "labelled_by": "Claude (visual annotation on gridded images, 2026-11-14): colour, shape, pixel centre of the visible object; +-10 px",
+ "colours_note": "real objects are orange / purple / yellow foam blocks; evaluation maps orange->red, purple->blue (nearest colour of the 3-colour vocabulary)",
+ "fields": "[colour, shape or null (cannot tell), u, v, flag] flag: '' | 'trunc' (cut by the image edge: not counted for recall, no FP) | 'hidden' (partly behind a hand: counted, shape may be null)",
+ "frames": {
+  "ep000_start": [["purple","cube",405,230,""],["orange","triangle",322,280,""],["orange","cube",550,322,""],["yellow","cube",272,380,""],["yellow","cylinder",442,398,""]],
+  "ep003_start": [["purple","cube",360,215,""],["orange","triangle",318,280,""],["yellow","cube",278,380,""],["orange","cube",480,370,""]],
+  "ep006_start": [["purple","cube",360,220,""],["orange","triangle",320,280,""],["orange","cube",310,375,""],["yellow","cube",190,382,""]],
+  "ep009_start": [["orange","cube",308,315,""],["orange","triangle",413,280,""],["purple","cube",417,375,""],["yellow","cube",172,382,""]],
+  "ep012_start": [["yellow","cylinder",225,272,"hidden"],["purple","cube",255,350,""],["orange","cube",372,282,""],["yellow","cube",420,393,""]],
+  "ep015_start": [["yellow","cube",400,243,""],["yellow","cylinder",282,338,"hidden"],["orange","cube",392,393,""],["orange",null,275,465,"trunc"]],
+  "ep018_start": [["yellow","cylinder",165,268,""],["purple","cube",232,225,""],["yellow","cube",210,305,""],["orange","cube",270,282,""],["orange","triangle",355,420,""]],
+  "ep021_start": [["purple","cube",445,203,""],["yellow","cube",465,265,""],["orange","cube",282,297,""],["yellow","cylinder",305,445,""],["orange",null,570,245,"hidden"]],
+  "ep024_start": [["purple","cube",440,210,""],["yellow","cube",465,265,""],["orange","cube",362,370,""],["orange",null,568,235,"hidden"]],
+  "ep027_start": [["purple","cube",445,205,""],["yellow","cube",465,265,""],["orange","cube",385,370,""],["orange",null,570,235,"hidden"]],
+  "ep030_start": [["purple","cube",445,210,""],["yellow","cube",495,258,""],["orange","triangle",572,235,""],["orange","cube",370,438,""]],
+  "ep033_start": [["yellow","cylinder",258,205,""],["purple","cube",443,210,""],["yellow","cube",495,258,""],["orange","triangle",572,240,""],["orange","cube",450,450,""]],
+  "ep036_start": [["purple","cube",352,330,""],["orange",null,522,325,"hidden"],["yellow","cylinder",408,410,""],["yellow","cube",465,440,"trunc"],["orange",null,390,465,"trunc"]],
+  "ep039_start": [["purple","cube",358,352,""],["yellow","cylinder",462,388,""],["orange",null,542,335,"hidden"],["yellow","cube",500,455,"trunc"],["orange",null,400,465,"trunc"]],
+  "ep042_start": [["purple","cube",330,360,"hidden"],["yellow","cylinder",455,385,"hidden"],["orange",null,525,335,"trunc"],["yellow","cube",490,450,"trunc"],["orange",null,400,465,"trunc"]],
+  "ep045_start": [["purple","cube",352,330,"hidden"],["yellow","cylinder",442,360,"hidden"]]
+ }}

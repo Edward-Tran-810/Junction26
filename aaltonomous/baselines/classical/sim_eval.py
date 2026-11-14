@@ -19,6 +19,8 @@ import numpy as np
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2])
+    ap.add_argument("--task", default="sort_fixed", choices=["sort_fixed", "sort_language"],
+                    help="sort_language: the policy parses the instruction (instruction.py); scored on the true mapping")
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--time-limit", type=float, default=120.0)
     ap.add_argument("--config", default=None)
@@ -35,7 +37,7 @@ def main(argv=None):
     from aaltonomous.sim.scene_client import SceneClient
     from .policy import ClassicalPolicy
 
-    env = AaltoEnv(backend="sim", task="sort_fixed", seed=0, time_limit=a.time_limit, img_server_ip=a.host,
+    env = AaltoEnv(backend="sim", task=a.task, seed=0, time_limit=a.time_limit, img_server_ip=a.host,
                    head_rgbd=True, head_rgbd_port=int(os.environ.get("AALTO_RGBD_PORT", "55560")))  # 2nd sim instance
     sc = SceneClient(a.host)
     from .config import load_config
@@ -48,7 +50,7 @@ def main(argv=None):
         for seed in a.seeds:
             env.rng = np.random.default_rng(seed)
             obs = env.reset()  # the policy goes home + settles before its first look (fresh frame)
-            pol.reset({"instruction": obs["instruction"]})
+            pol.reset({"instruction": obs["instruction"], "task": a.task})
             clips, info = [], {}
             while True:
                 obs, info = env.step(pol.act(obs))
@@ -57,9 +59,10 @@ def main(argv=None):
                 if info["episode_over"]:
                     break
             time.sleep(1.0)
-            ev = sc.evaluate("sort_fixed")
+            ev = sc.evaluate(a.task, env.mapping if a.task == "sort_language" else None)
             n_ok = sum(1 for o in ev["outcomes"] if o.get("outcome") == "correct")
-            row = {"seed": seed, "n_objects": len(env.layout), "correct": n_ok, "score": ev["score"],
+            row = {"seed": seed, "task": a.task, "instruction": env.instruction,
+                   "parsed_mapping": {str(k): v for k, v in pol.mapping.items()}, "n_objects": len(env.layout), "correct": n_ok, "score": ev["score"],
                    "end": info["end_reason"], "t": round(info["t"], 1), "clip_ticks": len(clips),
                    "safety": info.get("safety_summary"), "outcomes": ev["outcomes"],
                    "events": pol.events}

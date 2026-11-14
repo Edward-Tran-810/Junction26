@@ -1,0 +1,488 @@
+{
+ "v2": {
+  "stats": {
+   "n": 23,
+   "found": 18,
+   "fp": 28,
+   "c_ok": 18,
+   "c_unk": 0,
+   "c_wrong": 0,
+   "s_n": 18,
+   "s_ok": 0,
+   "s_unk": 18,
+   "s_wrong": 0,
+   "pts": -28,
+   "ms": 33.098977502959315
+  },
+  "rows": [
+   {
+    "id": "ep000_start",
+    "dets": [
+     "red    top=(+0.512,-0.141,+0.055) px=189 depth_px=0 [plane]",
+     "red    top=(+0.348,-0.077,+0.055) px=837 depth_px=0 [plane]",
+     "red    top=(+0.320,-0.125,+0.055) px=124 depth_px=0 [plane]",
+     "red    top=(+0.275,-0.047,+0.055) px=287 depth_px=0 [plane]",
+     "yellow top=(+0.345,-0.160,+0.055) px=1868 depth_px=0 [plane]",
+     "yellow top=(+0.242,-0.125,+0.055) px=2087 depth_px=0 [plane]",
+     "blue   top=(+0.300,+0.219,+0.055) px=10190 depth_px=0 [plane]",
+     "blue   top=(+0.357,+0.080,+0.055) px=175 depth_px=0 [plane]",
+     "blue   top=(+0.302,+0.020,+0.055) px=9588 depth_px=0 [plane]"
+    ],
+    "fp": 5
+   },
+   {
+    "id": "ep005_start",
+    "dets": [
+     "red    top=(+0.251,-0.029,+0.055) px=466 depth_px=0 [plane]",
+     "red    top=(+0.221,-0.102,+0.055) px=295 depth_px=0 [plane]",
+     "yellow top=(+0.350,-0.157,+0.055) px=1976 depth_px=0 [plane]",
+     "yellow top=(+0.242,-0.122,+0.055) px=1970 depth_px=0 [plane]",
+     "blue   top=(+0.492,+0.127,+0.055) px=293 depth_px=0 [plane]",
+     "blue   top=(+0.309,+0.216,+0.055) px=6944 depth_px=0 [plane]",
+     "blue   top=(+0.342,+0.186,+0.055) px=258 depth_px=0 [plane]",
+     "blue   top=(+0.368,+0.026,+0.055) px=2023 depth_px=0 [plane]",
+     "blue   top=(+0.346,+0.274,+0.055) px=128 depth_px=0 [plane]",
+     "blue   top=(+0.255,+0.009,+0.055) px=5902 depth_px=0 [plane]"
+    ],
+    "fp": 5
+   },
+   {
+    "id": "ep010_start",
+    "dets": [
+     "red    top=(+0.473,+0.127,+0.055) px=374 depth_px=0 [plane]",
+     "red    top=(+0.344,-0.032,+0.055) px=920 depth_px=0 [plane]",
+     "red    top=(+0.251,-0.016,+0.055) px=130 depth_px=0 [plane]",
+     "red    top=(+0.254,-0.025,+0.055) px=168 depth_px=0 [plane]",
+     "yellow top=(+0.349,-0.131,+0.055) px=2085 depth_px=0 [plane]",
+     "yellow top=(+0.254,-0.105,+0.055) px=2329 depth_px=0 [plane]",
+     "blue   top=(+0.304,+0.176,+0.055) px=5973 depth_px=0 [plane]",
+     "blue   top=(+0.343,+0.175,+0.055) px=281 depth_px=0 [plane]",
+     "blue   top=(+0.339,+0.035,+0.055) px=4395 depth_px=0 [plane]",
+     "blue   top=(+0.351,-0.253,+0.055) px=130 depth_px=0 [plane]",
+     "blue   top=(+0.341,+0.217,+0.055) px=120 depth_px=0 [plane]",
+     "blue   top=(+0.343,+0.294,+0.055) px=125 depth_px=0 [plane]",
+     "blue   top=(+0.268,+0.048,+0.055) px=5957 depth_px=0 [plane]",
+     "blue   cube top=(+0.262,+0.191,+0.055) yaw=-21 px=587 depth_px=0 [plane]",
+     "blue   top=(+0.271,+0.175,+0.055) px=194 depth_px=0 [plane]",
+     "blue   top=(+0.250,+0.156,+0.055) px=128 depth_px=0 [plane]"
+    ],
+    "fp": 10
+   },
+   {
+    "id": "ep015_start",
+    "dets": [
+     "red    top=(+0.509,+0.136,+0.055) px=250 depth_px=0 [plane]",
+     "red    top=(+0.352,+0.002,+0.055) px=984 depth_px=0 [plane]",
+     "yellow top=(+0.324,-0.086,+0.055) px=2714 depth_px=0 [plane]",
+     "yellow top=(+0.305,-0.059,+0.055) px=2481 depth_px=0 [plane]",
+     "blue   top=(+0.456,+0.132,+0.055) px=157 depth_px=0 [plane]",
+     "blue   top=(+0.400,+0.124,+0.055) px=139 depth_px=0 [plane]",
+     "blue   top=(+0.365,+0.150,+0.055) px=1690 depth_px=0 [plane]",
+     "blue   top=(+0.315,+0.231,+0.055) px=4610 depth_px=0 [plane]",
+     "blue   top=(+0.328,+0.061,+0.055) px=4666 depth_px=0 [plane]",
+     "blue   top=(+0.337,+0.300,+0.055) px=127 depth_px=0 [plane]",
+     "blue   top=(+0.236,+0.205,+0.055) px=195 depth_px=0 [plane]",
+     "blue   top=(+0.227,+0.236,+0.055) px=332 depth_px=0 [plane]"
+    ],
+    "fp": 8
+   }
+  ]
+ },
+ "detector": {
+  "stats": {
+   "n": 23,
+   "found": 22,
+   "fp": 0,
+   "c_ok": 17,
+   "c_unk": 0,
+   "c_wrong": 5,
+   "s_n": 22,
+   "s_ok": 17,
+   "s_unk": 0,
+   "s_wrong": 5,
+   "pts": 20,
+   "ms": 27.29989800354815,
+   "confusions": {
+    "orange->yellow": 5
+   }
+  },
+  "rows": [
+   {
+    "id": "ep000_start",
+    "dets": [
+     "yellow cube top=(+0.361,-0.084,+0.055) px=2709 depth_px=0 [plane+model]",
+     "blue   cube top=(+0.291,+0.022,+0.055) px=6405 depth_px=0 [plane+model]",
+     "yellow cube top=(+0.269,-0.148,+0.055) px=7198 depth_px=0 [plane+model]",
+     "blue   cylinder top=(+0.361,-0.010,+0.055) px=1670 depth_px=0 [plane+model]",
+     "yellow cylinder top=(+0.356,-0.166,+0.055) px=2372 depth_px=0 [plane+model]",
+     "yellow cube top=(+0.295,-0.065,+0.055) yaw=-28 px=5135 depth_px=0 [plane]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep005_start",
+    "dets": [
+     "blue   cube top=(+0.367,+0.018,+0.055) px=1385 depth_px=0 [plane+model]",
+     "yellow cube top=(+0.268,-0.144,+0.055) px=6984 depth_px=0 [plane+model]",
+     "yellow cylinder top=(+0.355,-0.161,+0.055) px=2489 depth_px=0 [plane+model]",
+     "blue   cube top=(+0.260,+0.006,+0.055) yaw=-2 px=5294 depth_px=0 [plane]",
+     "red    cube top=(+0.278,-0.048,+0.055) px=6738 depth_px=0 [plane+model]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep010_start",
+    "dets": [
+     "yellow cube top=(+0.279,-0.122,+0.055) px=6724 depth_px=0 [plane+model]",
+     "blue   cube top=(+0.348,+0.028,+0.055) px=3722 depth_px=0 [plane+model]",
+     "blue   cube top=(+0.266,+0.047,+0.055) yaw=+19 px=5525 depth_px=0 [plane]",
+     "yellow cube top=(+0.360,-0.044,+0.055) px=2436 depth_px=0 [plane+model]",
+     "yellow cylinder top=(+0.358,-0.133,+0.055) px=2339 depth_px=0 [plane+model]",
+     "yellow cube top=(+0.280,-0.032,+0.055) yaw=-11 px=5195 depth_px=0 [plane]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep015_start",
+    "dets": [
+     "yellow cube top=(+0.431,-0.123,+0.055) px=570 depth_px=0 [plane+model]",
+     "blue   cube top=(+0.331,+0.060,+0.055) yaw=+9 px=4469 depth_px=0 [plane]",
+     "yellow cube top=(+0.303,-0.055,+0.055) px=6209 depth_px=0 [plane+model]",
+     "yellow cylinder top=(+0.353,-0.115,+0.055) px=4018 depth_px=0 [plane+model]",
+     "red    cylinder top=(+0.358,-0.004,+0.055) px=1881 depth_px=0 [plane+model]"
+    ],
+    "fp": 0
+   }
+  ]
+ },
+ "open_vocab": {
+  "stats": {
+   "n": 23,
+   "found": 22,
+   "fp": 6,
+   "c_ok": 15,
+   "c_unk": 0,
+   "c_wrong": 7,
+   "s_n": 22,
+   "s_ok": 10,
+   "s_unk": 10,
+   "s_wrong": 2,
+   "pts": -3,
+   "ms": 75.32164299846045,
+   "confusions": {
+    "orange->yellow": 7
+   }
+  },
+  "rows": [
+   {
+    "id": "ep000_start",
+    "dets": [
+     "yellow cube top=(+0.271,-0.148,+0.055) px=7552 depth_px=0 [plane+model]",
+     "yellow cube top=(+0.359,-0.084,+0.055) px=3134 depth_px=0 [plane+model]",
+     "blue   top=(+0.292,+0.022,+0.055) px=6773 depth_px=0 [plane]",
+     "yellow top=(+0.352,-0.164,+0.055) px=3004 depth_px=0 [plane]",
+     "blue   top=(+0.356,-0.012,+0.055) px=2185 depth_px=0 [plane]",
+     "yellow top=(+0.297,-0.065,+0.055) px=5879 depth_px=0 [plane]",
+     "red    top=(+0.514,-0.141,+0.055) px=192 depth_px=0 [plane]",
+     "red    top=(+0.505,+0.133,+0.055) px=435 depth_px=0 [plane]"
+    ],
+    "fp": 2
+   },
+   {
+    "id": "ep005_start",
+    "dets": [
+     "yellow cube top=(+0.266,-0.141,+0.055) px=7622 depth_px=0 [plane+model]",
+     "yellow cube top=(+0.273,-0.048,+0.055) px=9041 depth_px=0 [plane+model]",
+     "blue   cube top=(+0.369,+0.025,+0.055) px=2018 depth_px=0 [plane+model]",
+     "yellow top=(+0.353,-0.162,+0.055) px=2931 depth_px=0 [plane]",
+     "blue   top=(+0.260,+0.004,+0.055) px=5893 depth_px=0 [plane]",
+     "yellow top=(+0.233,-0.066,+0.055) px=3182 depth_px=0 [plane]",
+     "red    top=(+0.498,+0.139,+0.055) px=531 depth_px=0 [plane]"
+    ],
+    "fp": 1
+   },
+   {
+    "id": "ep010_start",
+    "dets": [
+     "yellow cube top=(+0.280,-0.121,+0.055) px=7087 depth_px=0 [plane+model]",
+     "yellow cube top=(+0.359,-0.046,+0.055) px=3026 depth_px=0 [plane+model]",
+     "blue   cube top=(+0.346,+0.031,+0.055) px=4360 depth_px=0 [plane+model]",
+     "yellow cube top=(+0.357,-0.130,+0.055) px=2620 depth_px=0 [plane+model]",
+     "yellow top=(+0.280,-0.032,+0.055) px=5745 depth_px=0 [plane]",
+     "blue   top=(+0.266,+0.047,+0.055) px=6046 depth_px=0 [plane]",
+     "red    top=(+0.497,+0.138,+0.055) px=571 depth_px=0 [plane]"
+    ],
+    "fp": 1
+   },
+   {
+    "id": "ep015_start",
+    "dets": [
+     "yellow cube top=(+0.304,-0.057,+0.055) px=6635 depth_px=0 [plane+model]",
+     "yellow cube top=(+0.417,-0.120,+0.055) px=1303 depth_px=0 [plane+model]",
+     "yellow cube top=(+0.351,-0.113,+0.055) px=4438 depth_px=0 [plane+model]",
+     "yellow top=(+0.356,-0.006,+0.055) px=2112 depth_px=0 [plane]",
+     "blue   top=(+0.330,+0.060,+0.055) px=4845 depth_px=0 [plane]",
+     "red    top=(+0.497,-0.142,+0.055) px=284 depth_px=0 [plane]",
+     "red    top=(+0.487,+0.138,+0.055) px=718 depth_px=0 [plane]"
+    ],
+    "fp": 2
+   }
+  ]
+ },
+ "detector_hue": {
+  "stats": {
+   "n": 23,
+   "found": 22,
+   "fp": 0,
+   "c_ok": 22,
+   "c_unk": 0,
+   "c_wrong": 0,
+   "s_n": 22,
+   "s_ok": 17,
+   "s_unk": 0,
+   "s_wrong": 5,
+   "pts": 29,
+   "ms": 31.383923000248615
+  },
+  "rows": [
+   {
+    "id": "ep000_start",
+    "dets": [
+     "red    cube top=(+0.361,-0.084,+0.055) px=2709 depth_px=0 [plane+model]",
+     "blue   cube top=(+0.291,+0.022,+0.055) px=6405 depth_px=0 [plane+model]",
+     "yellow cube top=(+0.269,-0.148,+0.055) px=7198 depth_px=0 [plane+model]",
+     "blue   cylinder top=(+0.361,-0.010,+0.055) px=1670 depth_px=0 [plane+model]",
+     "yellow cylinder top=(+0.356,-0.166,+0.055) px=2372 depth_px=0 [plane+model]",
+     "red    cube top=(+0.295,-0.065,+0.055) yaw=-28 px=5135 depth_px=0 [plane]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep005_start",
+    "dets": [
+     "blue   cube top=(+0.367,+0.018,+0.055) px=1385 depth_px=0 [plane+model]",
+     "yellow cube top=(+0.268,-0.144,+0.055) px=6984 depth_px=0 [plane+model]",
+     "yellow cylinder top=(+0.355,-0.161,+0.055) px=2489 depth_px=0 [plane+model]",
+     "blue   cube top=(+0.260,+0.006,+0.055) yaw=-2 px=5294 depth_px=0 [plane]",
+     "red    cube top=(+0.278,-0.048,+0.055) px=6738 depth_px=0 [plane+model]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep010_start",
+    "dets": [
+     "yellow cube top=(+0.279,-0.122,+0.055) px=6724 depth_px=0 [plane+model]",
+     "blue   cube top=(+0.348,+0.028,+0.055) px=3722 depth_px=0 [plane+model]",
+     "blue   cube top=(+0.266,+0.047,+0.055) yaw=+19 px=5525 depth_px=0 [plane]",
+     "red    cube top=(+0.360,-0.044,+0.055) px=2436 depth_px=0 [plane+model]",
+     "yellow cylinder top=(+0.358,-0.133,+0.055) px=2339 depth_px=0 [plane+model]",
+     "red    cube top=(+0.280,-0.032,+0.055) yaw=-11 px=5195 depth_px=0 [plane]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep015_start",
+    "dets": [
+     "red    cube top=(+0.431,-0.123,+0.055) px=570 depth_px=0 [plane+model]",
+     "blue   cube top=(+0.331,+0.060,+0.055) yaw=+9 px=4469 depth_px=0 [plane]",
+     "yellow cube top=(+0.303,-0.055,+0.055) px=6209 depth_px=0 [plane+model]",
+     "yellow cylinder top=(+0.353,-0.115,+0.055) px=4018 depth_px=0 [plane+model]",
+     "red    cylinder top=(+0.358,-0.004,+0.055) px=1881 depth_px=0 [plane+model]"
+    ],
+    "fp": 0
+   }
+  ]
+ },
+ "detector_hue_wb": {
+  "stats": {
+   "n": 23,
+   "found": 22,
+   "fp": 0,
+   "c_ok": 19,
+   "c_unk": 3,
+   "c_wrong": 0,
+   "s_n": 22,
+   "s_ok": 17,
+   "s_unk": 0,
+   "s_wrong": 5,
+   "pts": 29,
+   "ms": 42.61028849941795
+  },
+  "rows": [
+   {
+    "id": "ep000_start",
+    "dets": [
+     "red    cube top=(+0.361,-0.084,+0.055) px=2709 depth_px=0 [plane+model]",
+     "blue   cube top=(+0.291,+0.022,+0.055) px=6405 depth_px=0 [plane+model]",
+     "yellow cube top=(+0.269,-0.148,+0.055) px=7198 depth_px=0 [plane+model]",
+     "blue   cylinder top=(+0.361,-0.010,+0.055) px=1670 depth_px=0 [plane+model]",
+     "yellow cylinder top=(+0.356,-0.166,+0.055) px=2372 depth_px=0 [plane+model]",
+     "red    cube top=(+0.295,-0.065,+0.055) yaw=-28 px=5135 depth_px=0 [plane]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep005_start",
+    "dets": [
+     "blue   cube top=(+0.367,+0.018,+0.055) px=1385 depth_px=0 [plane+model]",
+     "yellow cube top=(+0.268,-0.144,+0.055) px=6984 depth_px=0 [plane+model]",
+     "yellow cylinder top=(+0.355,-0.161,+0.055) px=2489 depth_px=0 [plane+model]",
+     "None   cube top=(+0.260,+0.006,+0.055) yaw=-2 px=5294 depth_px=0 [plane]",
+     "red    cube top=(+0.278,-0.048,+0.055) px=6738 depth_px=0 [plane+model]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep010_start",
+    "dets": [
+     "yellow cube top=(+0.279,-0.122,+0.055) px=6724 depth_px=0 [plane+model]",
+     "blue   cube top=(+0.348,+0.028,+0.055) px=3722 depth_px=0 [plane+model]",
+     "None   cube top=(+0.266,+0.047,+0.055) yaw=+19 px=5525 depth_px=0 [plane]",
+     "red    cube top=(+0.360,-0.044,+0.055) px=2436 depth_px=0 [plane+model]",
+     "yellow cylinder top=(+0.358,-0.133,+0.055) px=2339 depth_px=0 [plane+model]",
+     "red    cube top=(+0.280,-0.032,+0.055) yaw=-11 px=5195 depth_px=0 [plane]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep015_start",
+    "dets": [
+     "red    cube top=(+0.431,-0.123,+0.055) px=570 depth_px=0 [plane+model]",
+     "None   cube top=(+0.331,+0.060,+0.055) yaw=+9 px=4469 depth_px=0 [plane]",
+     "yellow cube top=(+0.303,-0.055,+0.055) px=6209 depth_px=0 [plane+model]",
+     "yellow cylinder top=(+0.353,-0.115,+0.055) px=4018 depth_px=0 [plane+model]",
+     "red    cylinder top=(+0.358,-0.004,+0.055) px=1881 depth_px=0 [plane+model]"
+    ],
+    "fp": 0
+   }
+  ]
+ },
+ "detector_hue_wb_agree": {
+  "stats": {
+   "n": 23,
+   "found": 22,
+   "fp": 0,
+   "c_ok": 14,
+   "c_unk": 8,
+   "c_wrong": 0,
+   "s_n": 22,
+   "s_ok": 17,
+   "s_unk": 0,
+   "s_wrong": 5,
+   "pts": 23,
+   "ms": 41.22116649887175
+  },
+  "rows": [
+   {
+    "id": "ep000_start",
+    "dets": [
+     "None   cube top=(+0.361,-0.084,+0.055) px=2709 depth_px=0 [plane+model]",
+     "blue   cube top=(+0.291,+0.022,+0.055) px=6405 depth_px=0 [plane+model]",
+     "yellow cube top=(+0.269,-0.148,+0.055) px=7198 depth_px=0 [plane+model]",
+     "blue   cylinder top=(+0.361,-0.010,+0.055) px=1670 depth_px=0 [plane+model]",
+     "yellow cylinder top=(+0.356,-0.166,+0.055) px=2372 depth_px=0 [plane+model]",
+     "None   cube top=(+0.295,-0.065,+0.055) yaw=-28 px=5135 depth_px=0 [plane]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep005_start",
+    "dets": [
+     "blue   cube top=(+0.367,+0.018,+0.055) px=1385 depth_px=0 [plane+model]",
+     "yellow cube top=(+0.268,-0.144,+0.055) px=6984 depth_px=0 [plane+model]",
+     "yellow cylinder top=(+0.355,-0.161,+0.055) px=2489 depth_px=0 [plane+model]",
+     "None   cube top=(+0.260,+0.006,+0.055) yaw=-2 px=5294 depth_px=0 [plane]",
+     "red    cube top=(+0.278,-0.048,+0.055) px=6738 depth_px=0 [plane+model]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep010_start",
+    "dets": [
+     "yellow cube top=(+0.279,-0.122,+0.055) px=6724 depth_px=0 [plane+model]",
+     "blue   cube top=(+0.348,+0.028,+0.055) px=3722 depth_px=0 [plane+model]",
+     "None   cube top=(+0.266,+0.047,+0.055) yaw=+19 px=5525 depth_px=0 [plane]",
+     "None   cube top=(+0.360,-0.044,+0.055) px=2436 depth_px=0 [plane+model]",
+     "yellow cylinder top=(+0.358,-0.133,+0.055) px=2339 depth_px=0 [plane+model]",
+     "None   cube top=(+0.280,-0.032,+0.055) yaw=-11 px=5195 depth_px=0 [plane]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep015_start",
+    "dets": [
+     "None   cube top=(+0.431,-0.123,+0.055) px=570 depth_px=0 [plane+model]",
+     "None   cube top=(+0.331,+0.060,+0.055) yaw=+9 px=4469 depth_px=0 [plane]",
+     "yellow cube top=(+0.303,-0.055,+0.055) px=6209 depth_px=0 [plane+model]",
+     "yellow cylinder top=(+0.353,-0.115,+0.055) px=4018 depth_px=0 [plane+model]",
+     "red    cylinder top=(+0.358,-0.004,+0.055) px=1881 depth_px=0 [plane+model]"
+    ],
+    "fp": 0
+   }
+  ]
+ },
+ "detector_hue_real": {
+  "stats": {
+   "n": 23,
+   "found": 22,
+   "fp": 0,
+   "c_ok": 22,
+   "c_unk": 0,
+   "c_wrong": 0,
+   "s_n": 22,
+   "s_ok": 17,
+   "s_unk": 0,
+   "s_wrong": 5,
+   "pts": 29,
+   "ms": 31.77114649952273
+  },
+  "rows": [
+   {
+    "id": "ep000_start",
+    "dets": [
+     "red    cube top=(+0.361,-0.084,+0.055) px=2709 depth_px=0 [plane+model]",
+     "blue   cube top=(+0.291,+0.022,+0.055) px=6405 depth_px=0 [plane+model]",
+     "yellow cube top=(+0.269,-0.148,+0.055) px=7198 depth_px=0 [plane+model]",
+     "blue   cylinder top=(+0.361,-0.010,+0.055) px=1670 depth_px=0 [plane+model]",
+     "yellow cylinder top=(+0.356,-0.166,+0.055) px=2372 depth_px=0 [plane+model]",
+     "red    cube top=(+0.295,-0.065,+0.055) yaw=-28 px=5135 depth_px=0 [plane]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep005_start",
+    "dets": [
+     "blue   cube top=(+0.367,+0.018,+0.055) px=1385 depth_px=0 [plane+model]",
+     "yellow cube top=(+0.268,-0.144,+0.055) px=6984 depth_px=0 [plane+model]",
+     "yellow cylinder top=(+0.355,-0.161,+0.055) px=2489 depth_px=0 [plane+model]",
+     "blue   cube top=(+0.260,+0.006,+0.055) yaw=-2 px=5294 depth_px=0 [plane]",
+     "red    cube top=(+0.278,-0.048,+0.055) px=6738 depth_px=0 [plane+model]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep010_start",
+    "dets": [
+     "yellow cube top=(+0.279,-0.122,+0.055) px=6724 depth_px=0 [plane+model]",
+     "blue   cube top=(+0.348,+0.028,+0.055) px=3722 depth_px=0 [plane+model]",
+     "blue   cube top=(+0.266,+0.047,+0.055) yaw=+19 px=5525 depth_px=0 [plane]",
+     "red    cube top=(+0.360,-0.044,+0.055) px=2436 depth_px=0 [plane+model]",
+     "yellow cylinder top=(+0.358,-0.133,+0.055) px=2339 depth_px=0 [plane+model]",
+     "red    cube top=(+0.280,-0.032,+0.055) yaw=-11 px=5195 depth_px=0 [plane]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep015_start",
+    "dets": [
+     "red    cube top=(+0.431,-0.123,+0.055) px=570 depth_px=0 [plane+model]",
+     "blue   cube top=(+0.331,+0.060,+0.055) yaw=+9 px=4469 depth_px=0 [plane]",
+     "yellow cube top=(+0.303,-0.055,+0.055) px=6209 depth_px=0 [plane+model]",
+     "yellow cylinder top=(+0.353,-0.115,+0.055) px=4018 depth_px=0 [plane+model]",
+     "red    cylinder top=(+0.358,-0.004,+0.055) px=1881 depth_px=0 [plane+model]"
+    ],
+    "fp": 0
+   }
+  ]
+ }
+}

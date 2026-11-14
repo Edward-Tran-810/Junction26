@@ -1,19 +1,24 @@
 # Classical rung-1 baseline (`sort_fixed`)
 
-Head RGB-D → HSV colour blobs + depth → object top centre in the pelvis frame → top-down "claw" grasp planned with
-Pinocchio IK → carry to the bin given by the mapping (rung 1: red → left, yellow → center, blue → right) → release → home → look again, until nothing sortable is left
-(`done`). Plans are pre-checked against the safety filter (0 clips). Cross-body objects are put down where the other
-arm can finish. Rung 1 only: ignores shape and the instruction text. Meant as a floor and a code reference.
+Head RGB-D → objects (colour, shape, top centre, yaw) in the pelvis frame → top-down "claw" grasp planned with
+Pinocchio IK → carry to the bin given by the mapping (rung 1: red → left, yellow → center, blue → right; rung 2: the
+instruction parsed by `instruction.py`, colour and/or shape rules) → release → home → look again, until nothing
+sortable is left (`done`). Plans are pre-checked against the safety filter (0 clips). Cross-body objects are put down
+where the other arm can finish. Meant as a floor and a code reference.
 
 | File | What |
 |---|---|
-| `perception.py` | HSV masks + head depth → detections in the pelvis frame (`interface/calibration.yaml`) |
+| `perception.py` | Head RGB-D → detections in the pelvis frame (`interface/calibration.yaml`). `perception.pipeline`: **v2** (default, 2026-11-14: depth-geometry segmentation, camera self-refinement on the counter plane + bins, shape / yaw by polygon fit) or **legacy** (2026-11-11 HSV blobs) |
+| `shape_fit.py` | Shape / yaw / centre from the known object geometry: top-face polygon fit (used) and render-and-compare of the projected 3D prism (fallback without depth) |
+| `instruction.py` | English instruction → colour / (colour, shape) → bin mapping (rule-based; `loop/STATE.md` track 1) |
 | `kinematics.py` | Pinocchio FK/IK on the G1 URDF (`third_party/xr_teleoperate/.../g1_body29_hand14.urdf`) |
 | `planner.py` | Cartesian waypoints → 30 Hz joint trajectories, safety pre-check |
 | `policy.py` | `ClassicalPolicy`: state machine; plans in a thread and returns holds meanwhile |
 | `policy_server.py` | The same policy behind the submission protocol (port 8000) = **reference submission** |
 | `config.yaml` | Everything tunable (HSV ranges, grasp, home pose, speeds, hand postures); `profiles.sim` = sim-tuned overrides |
-| `run.py`, `sim_eval.py`, `mock_world.py` | In-process runs: mock world / real robot, Isaac sim scoring, rendered mock |
+| `run.py`, `sim_eval.py`, `mock_world.py` | In-process runs: mock world / real robot, Isaac sim scoring, rendered mock (true cube / cylinder / triangle prisms) |
+| `test_classical.py`, `test_perception.py` | Offline tests (no sim): planner, policy, parser, perception on deterministic synthetic RGB-D fixtures |
+| `loop/` | Improvement loop: `STATE.md` (status, scores, decisions), `lang/` (parser batches + `eval_lang.py`), `vision/` (synthetic RGB-D bench `synth.py`, splits `dataset.py`, metrics `eval_vision.py`, Isaac recorder `capture_sim.py`, real-frame viewer `look_frames.py`) |
 
 ## Numbers (2026-11-11, nominal sim = DR off, rung 1)
 
@@ -38,6 +43,29 @@ command rate stays at 30 Hz under CPU load.
 **Sim-tuned (profile `sim`, the default; `AALTO_PROFILE=none` or `run.py --backend real` = robot base values):**
 home pose, speeds/accelerations, holds, counter clearance 2 cm, IK tilt 35 deg / joint step 0.6. The HSV floor,
 grasp point and `open` posture are in the base config but were also only checked in the sim.
+
+## Perception v2 (2026-11-14) — SYNTHETIC numbers only
+
+Measured on the synthetic RGB-D bench (`loop/vision/synth.py`: exact object geometry, real mat texture or held-out
+procedural textures, lighting / colour / sensor randomisation incl. +-1 cm / +-1 deg camera pose error). These are
+algorithmic checks, **not sim or real results**: v2 has not been run in Isaac or on the robot yet (`loop/STATE.md`).
+
+| Final synthetic holdout (240 frames) | recall | FP | shape (wrong) | xy median / p95 | yaw median / p95 | ms (1 thread) |
+|---|---|---|---|---|---|---|
+| legacy | 88.3 % | 6.1 % | — | 10.3 / 21.0 mm | cubes only | 38.5 |
+| **v2** | **99.5 %** | **0 %** | **99.3 % (0 wrong)** | **1.0 / 2.0 mm** | **0.4 / 1.4 deg** | **14.9 first frame, 10.7 cached** |
+
+`Detection` keeps its fields and adds `shape` (None = not sure: the policy then sorts by colour only when every shape of
+that colour goes to the same bin), `shape_conf`, `fit_iou`; `yaw` = pelvis yaw of the canonical outline
+(`scene.shape_polygon`), wrapped to the symmetry. The camera correction is estimated on an episode's first frame and
+cached (`ClassicalPolicy.reset()` clears it). Assumes the counter is level in the pelvis frame and the bins stand where
+`scene.yaml` says; both refinements can be switched off in `config.yaml` (`plane_refine`, `bin_refine`).
+
+```bash
+OMP_NUM_THREADS=4 python -m unittest aaltonomous/baselines/classical/test_perception.py        # 23 tests, ~12 s
+python -m aaltonomous.baselines.classical.loop.vision.eval_vision --split dev --variant legacy v2 --overlays 5
+python -m aaltonomous.baselines.classical.loop.vision.look_frames <drop-1 session or dir of .npz frames>
+```
 
 ## Run it
 

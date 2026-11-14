@@ -1,0 +1,705 @@
+{
+ "v2": {
+  "stats": {
+   "n": 30,
+   "found": 12,
+   "fp": 88,
+   "c_ok": 11,
+   "c_unk": 0,
+   "c_wrong": 1,
+   "s_n": 11,
+   "s_ok": 0,
+   "s_unk": 11,
+   "s_wrong": 0,
+   "pts": -89,
+   "ms": 31.76631099995575,
+   "confusions": {
+    "orange->blue": 1
+   }
+  },
+  "rows": [
+   {
+    "id": "ep001_start",
+    "dets": [
+     "yellow top=(+0.267,-0.065,+0.055) px=1424 depth_px=0 [plane]",
+     "yellow top=(+0.286,+0.049,+0.055) px=1370 depth_px=0 [plane]",
+     "blue   top=(+0.342,+0.191,+0.055) px=1681 depth_px=0 [plane]",
+     "blue   top=(+0.368,-0.267,+0.055) px=244 depth_px=0 [plane]",
+     "blue   cube top=(+0.323,+0.197,+0.055) yaw=-1 px=642 depth_px=0 [plane]",
+     "blue   top=(+0.311,-0.159,+0.055) px=938 depth_px=0 [plane]",
+     "blue   top=(+0.258,+0.087,+0.055) px=588 depth_px=0 [plane]",
+     "blue   top=(+0.254,+0.137,+0.055) px=273 depth_px=0 [plane]",
+     "blue   top=(+0.253,+0.127,+0.055) px=269 depth_px=0 [plane]",
+     "blue   top=(+0.246,+0.055,+0.055) px=129 depth_px=0 [plane]",
+     "blue   top=(+0.236,+0.050,+0.055) px=614 depth_px=0 [plane]",
+     "blue   top=(+0.225,+0.225,+0.055) px=561 depth_px=0 [plane]",
+     "blue   top=(+0.224,+0.197,+0.055) px=401 depth_px=0 [plane]",
+     "blue   top=(+0.226,-0.140,+0.055) px=380 depth_px=0 [plane]"
+    ],
+    "fp": 12
+   },
+   {
+    "id": "ep007_start",
+    "dets": [
+     "yellow top=(+0.307,+0.142,+0.055) px=3706 depth_px=0 [plane]",
+     "blue   top=(+0.344,-0.222,+0.055) px=1638 depth_px=0 [plane]",
+     "blue   top=(+0.318,+0.264,+0.055) px=1808 depth_px=0 [plane]",
+     "blue   top=(+0.227,+0.052,+0.055) px=166 depth_px=0 [plane]"
+    ],
+    "fp": 3
+   },
+   {
+    "id": "ep013_start",
+    "dets": [
+     "red    top=(+0.351,-0.034,+0.055) px=164 depth_px=0 [plane]",
+     "yellow top=(+0.369,-0.020,+0.055) px=334 depth_px=0 [plane]",
+     "blue   top=(+0.344,+0.214,+0.055) px=821 depth_px=0 [plane]",
+     "blue   top=(+0.322,+0.059,+0.055) px=6016 depth_px=0 [plane]",
+     "blue   top=(+0.285,+0.200,+0.055) px=4759 depth_px=0 [plane]",
+     "blue   top=(+0.329,+0.189,+0.055) px=292 depth_px=0 [plane]",
+     "blue   top=(+0.311,+0.178,+0.055) px=129 depth_px=0 [plane]",
+     "blue   top=(+0.301,+0.181,+0.055) px=228 depth_px=0 [plane]",
+     "blue   triangle top=(+0.229,+0.156,+0.055) yaw=+37 px=149 depth_px=0 [plane]",
+     "blue   top=(+0.233,+0.044,+0.055) px=237 depth_px=0 [plane]",
+     "blue   triangle top=(+0.230,+0.216,+0.055) yaw=+49 px=274 depth_px=0 [plane]"
+    ],
+    "fp": 10
+   },
+   {
+    "id": "ep019_start",
+    "dets": [
+     "blue   top=(+0.500,+0.139,+0.055) px=508 depth_px=0 [plane]",
+     "blue   top=(+0.359,+0.285,+0.055) px=157 depth_px=0 [plane]",
+     "blue   top=(+0.367,+0.024,+0.055) px=399 depth_px=0 [plane]",
+     "blue   top=(+0.349,-0.240,+0.055) px=627 depth_px=0 [plane]",
+     "blue   top=(+0.323,-0.134,+0.055) px=202 depth_px=0 [plane]",
+     "blue   top=(+0.285,-0.046,+0.055) px=4737 depth_px=0 [plane]",
+     "blue   top=(+0.300,-0.109,+0.055) px=966 depth_px=0 [plane]",
+     "blue   top=(+0.305,+0.029,+0.055) px=1646 depth_px=0 [plane]",
+     "blue   top=(+0.282,+0.273,+0.055) px=154 depth_px=0 [plane]",
+     "blue   top=(+0.281,+0.202,+0.055) px=246 depth_px=0 [plane]",
+     "blue   top=(+0.251,-0.101,+0.055) px=2109 depth_px=0 [plane]",
+     "blue   top=(+0.271,-0.161,+0.055) px=120 depth_px=0 [plane]",
+     "blue   triangle top=(+0.257,+0.207,+0.055) yaw=-30 px=242 depth_px=0 [plane]",
+     "blue   top=(+0.247,+0.204,+0.055) px=340 depth_px=0 [plane]",
+     "blue   top=(+0.246,+0.066,+0.055) px=546 depth_px=0 [plane]",
+     "blue   top=(+0.231,-0.185,+0.055) px=400 depth_px=0 [plane]"
+    ],
+    "fp": 15
+   },
+   {
+    "id": "ep025_start",
+    "dets": [
+     "yellow top=(+0.403,-0.129,+0.055) px=660 depth_px=0 [plane]",
+     "blue   top=(+0.344,+0.065,+0.055) px=1137 depth_px=0 [plane]",
+     "blue   top=(+0.271,-0.148,+0.055) px=10730 depth_px=0 [plane]",
+     "blue   top=(+0.309,+0.103,+0.055) px=877 depth_px=0 [plane]",
+     "blue   top=(+0.273,-0.210,+0.055) px=163 depth_px=0 [plane]",
+     "blue   top=(+0.251,+0.152,+0.055) px=2505 depth_px=0 [plane]",
+     "blue   top=(+0.267,-0.018,+0.055) px=632 depth_px=0 [plane]",
+     "blue   top=(+0.236,+0.021,+0.055) px=1355 depth_px=0 [plane]",
+     "blue   top=(+0.263,+0.070,+0.055) px=139 depth_px=0 [plane]",
+     "blue   top=(+0.229,+0.115,+0.055) px=152 depth_px=0 [plane]"
+    ],
+    "fp": 9
+   },
+   {
+    "id": "ep031_start",
+    "dets": [
+     "yellow top=(+0.411,-0.129,+0.055) px=718 depth_px=0 [plane]",
+     "blue   top=(+0.354,+0.136,+0.055) px=2822 depth_px=0 [plane]",
+     "blue   top=(+0.306,-0.164,+0.055) px=3233 depth_px=0 [plane]",
+     "blue   top=(+0.276,+0.230,+0.055) px=423 depth_px=0 [plane]",
+     "blue   top=(+0.266,+0.223,+0.055) px=2205 depth_px=0 [plane]",
+     "blue   top=(+0.252,+0.009,+0.055) px=747 depth_px=0 [plane]",
+     "blue   top=(+0.272,-0.231,+0.055) px=199 depth_px=0 [plane]",
+     "blue   top=(+0.255,+0.076,+0.055) px=1188 depth_px=0 [plane]",
+     "blue   top=(+0.249,+0.178,+0.055) px=392 depth_px=0 [plane]",
+     "blue   top=(+0.246,+0.017,+0.055) px=875 depth_px=0 [plane]",
+     "blue   top=(+0.256,+0.194,+0.055) px=128 depth_px=0 [plane]",
+     "blue   top=(+0.243,+0.154,+0.055) px=208 depth_px=0 [plane]",
+     "blue   top=(+0.241,+0.157,+0.055) px=476 depth_px=0 [plane]",
+     "blue   top=(+0.228,+0.221,+0.055) px=172 depth_px=0 [plane]",
+     "blue   top=(+0.228,+0.242,+0.055) px=168 depth_px=0 [plane]"
+    ],
+    "fp": 14
+   },
+   {
+    "id": "ep037_start",
+    "dets": [
+     "red    top=(+0.511,-0.142,+0.055) px=145 depth_px=0 [plane]",
+     "yellow top=(+0.280,-0.080,+0.055) px=1434 depth_px=0 [plane]",
+     "yellow top=(+0.216,-0.079,+0.055) px=146 depth_px=0 [plane]",
+     "blue   top=(+0.303,+0.187,+0.055) px=6422 depth_px=0 [plane]",
+     "blue   top=(+0.341,+0.169,+0.055) px=168 depth_px=0 [plane]",
+     "blue   top=(+0.338,-0.020,+0.055) px=5083 depth_px=0 [plane]",
+     "blue   triangle top=(+0.308,-0.173,+0.055) yaw=+56 px=767 depth_px=0 [plane]",
+     "blue   top=(+0.308,-0.184,+0.055) px=656 depth_px=0 [plane]",
+     "blue   top=(+0.315,+0.083,+0.055) px=120 depth_px=0 [plane]",
+     "blue   top=(+0.305,-0.217,+0.055) px=124 depth_px=0 [plane]",
+     "blue   top=(+0.293,+0.046,+0.055) px=1031 depth_px=0 [plane]",
+     "blue   top=(+0.251,-0.205,+0.055) px=1257 depth_px=0 [plane]",
+     "blue   top=(+0.258,+0.243,+0.055) px=316 depth_px=0 [plane]",
+     "blue   top=(+0.239,+0.230,+0.055) px=160 depth_px=0 [plane]",
+     "blue   top=(+0.229,+0.203,+0.055) px=374 depth_px=0 [plane]",
+     "blue   top=(+0.235,-0.209,+0.055) px=324 depth_px=0 [plane]",
+     "blue   top=(+0.227,+0.223,+0.055) px=164 depth_px=0 [plane]"
+    ],
+    "fp": 13
+   },
+   {
+    "id": "ep043_start",
+    "dets": [
+     "red    top=(+0.512,-0.142,+0.055) px=139 depth_px=0 [plane]",
+     "yellow top=(+0.292,-0.086,+0.055) px=1332 depth_px=0 [plane]",
+     "yellow top=(+0.223,-0.074,+0.055) px=308 depth_px=0 [plane]",
+     "blue   top=(+0.356,+0.120,+0.055) px=1753 depth_px=0 [plane]",
+     "blue   top=(+0.336,-0.005,+0.055) px=5314 depth_px=0 [plane]",
+     "blue   triangle top=(+0.348,-0.211,+0.055) yaw=-32 px=127 depth_px=0 [plane]",
+     "blue   top=(+0.280,+0.180,+0.055) px=6553 depth_px=0 [plane]",
+     "blue   top=(+0.271,-0.129,+0.055) px=1029 depth_px=0 [plane]",
+     "blue   top=(+0.280,+0.051,+0.055) px=883 depth_px=0 [plane]",
+     "blue   top=(+0.266,-0.130,+0.055) px=297 depth_px=0 [plane]",
+     "blue   top=(+0.269,-0.168,+0.055) px=138 depth_px=0 [plane]",
+     "blue   top=(+0.254,+0.238,+0.055) px=790 depth_px=0 [plane]",
+     "blue   top=(+0.225,-0.162,+0.055) px=324 depth_px=0 [plane]",
+     "blue   triangle top=(+0.223,-0.202,+0.055) yaw=-9 px=167 depth_px=0 [plane]"
+    ],
+    "fp": 12
+   }
+  ]
+ },
+ "detector": {
+  "stats": {
+   "n": 30,
+   "found": 16,
+   "fp": 2,
+   "c_ok": 12,
+   "c_unk": 0,
+   "c_wrong": 4,
+   "s_n": 15,
+   "s_ok": 14,
+   "s_unk": 0,
+   "s_wrong": 1,
+   "pts": 15,
+   "ms": 16.04311699702521,
+   "confusions": {
+    "orange->yellow": 3,
+    "orange->blue": 1
+   }
+  },
+  "rows": [
+   {
+    "id": "ep001_start",
+    "dets": [
+     "yellow cube top=(+0.310,+0.053,+0.055) px=6280 depth_px=0 [plane+model]",
+     "yellow cube top=(+0.385,-0.118,+0.055) px=3623 depth_px=0 [plane+model]",
+     "yellow cube top=(+0.291,-0.080,+0.055) yaw=-41 px=5252 depth_px=0 [plane]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep007_start",
+    "dets": [
+     "yellow cube top=(+0.333,-0.148,+0.055) px=6465 depth_px=0 [plane+model]",
+     "yellow cube top=(+0.309,+0.142,+0.055) px=7127 depth_px=0 [plane+model]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep013_start",
+    "dets": [
+     "yellow cube top=(+0.373,-0.011,+0.055) px=436 depth_px=0 [plane+model]",
+     "yellow cube top=(+0.313,-0.077,+0.055) px=6856 depth_px=0 [plane+model]",
+     "blue   cube top=(+0.323,+0.058,+0.055) px=6230 depth_px=0 [plane+model]"
+    ],
+    "fp": 1
+   },
+   {
+    "id": "ep019_start",
+    "dets": [
+     "blue   cube top=(+0.502,+0.138,+0.055) px=476 depth_px=0 [plane+model]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep025_start",
+    "dets": [
+     "yellow cube top=(+0.437,-0.129,+0.055) px=1789 depth_px=0 [plane+model]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep031_start",
+    "dets": [
+     "yellow cube top=(+0.439,-0.130,+0.055) px=1760 depth_px=0 [plane+model]",
+     "red    cube top=(+0.289,-0.042,+0.055) yaw=+44 px=5920 depth_px=0 [plane]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep037_start",
+    "dets": [
+     "blue   cube top=(+0.352,-0.030,+0.055) px=3878 depth_px=0 [plane+model]",
+     "yellow cylinder top=(+0.300,-0.089,+0.055) px=3973 depth_px=0 [plane]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep043_start",
+    "dets": [
+     "blue   cube top=(+0.344,-0.010,+0.055) px=4134 depth_px=0 [plane+model]",
+     "yellow cylinder top=(+0.304,-0.088,+0.055) px=3846 depth_px=0 [plane]",
+     "blue   triangle top=(+0.358,-0.200,+0.055) px=2259 depth_px=0 [plane+model]",
+     "blue   cube top=(+0.258,+0.195,+0.055) yaw=-1 px=6503 depth_px=0 [plane]"
+    ],
+    "fp": 1
+   }
+  ]
+ },
+ "open_vocab": {
+  "stats": {
+   "n": 30,
+   "found": 21,
+   "fp": 2,
+   "c_ok": 12,
+   "c_unk": 0,
+   "c_wrong": 9,
+   "s_n": 18,
+   "s_ok": 13,
+   "s_unk": 5,
+   "s_wrong": 0,
+   "pts": 7,
+   "ms": 53.50515749887563,
+   "confusions": {
+    "orange->yellow": 9
+   }
+  },
+  "rows": [
+   {
+    "id": "ep001_start",
+    "dets": [
+     "yellow cube top=(+0.308,+0.053,+0.055) px=6636 depth_px=0 [plane+model]",
+     "yellow cube top=(+0.375,-0.116,+0.055) px=4755 depth_px=0 [plane+model]",
+     "yellow top=(+0.292,-0.081,+0.055) px=5516 depth_px=0 [plane]",
+     "yellow top=(+0.369,+0.007,+0.055) px=260 depth_px=0 [plane]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep007_start",
+    "dets": [
+     "yellow cube top=(+0.307,+0.141,+0.055) px=7680 depth_px=0 [plane+model]",
+     "yellow cube top=(+0.330,-0.148,+0.055) px=7481 depth_px=0 [plane+model]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep013_start",
+    "dets": [
+     "yellow cube top=(+0.370,-0.019,+0.055) px=812 depth_px=0 [plane+model]",
+     "yellow cube top=(+0.314,-0.076,+0.055) px=7578 depth_px=0 [plane+model]",
+     "blue   cube top=(+0.322,+0.058,+0.055) px=6537 depth_px=0 [plane+model]"
+    ],
+    "fp": 1
+   },
+   {
+    "id": "ep019_start",
+    "dets": [
+     "blue   cube top=(+0.500,+0.139,+0.055) px=511 depth_px=0 [plane+model]",
+     "yellow top=(+0.372,-0.041,+0.055) px=921 depth_px=0 [plane]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep025_start",
+    "dets": [
+     "blue   cube top=(+0.490,-0.135,+0.055) px=346 depth_px=0 [plane+model]",
+     "yellow cube top=(+0.437,-0.129,+0.055) px=1815 depth_px=0 [plane+model]",
+     "yellow top=(+0.288,-0.057,+0.055) px=7775 depth_px=0 [plane]"
+    ],
+    "fp": 1
+   },
+   {
+    "id": "ep031_start",
+    "dets": [
+     "yellow cube top=(+0.287,-0.041,+0.055) px=6660 depth_px=0 [plane+model]",
+     "yellow cube top=(+0.439,-0.130,+0.055) px=1784 depth_px=0 [plane+model]",
+     "blue   cube top=(+0.490,-0.134,+0.055) px=312 depth_px=0 [plane+model]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep037_start",
+    "dets": [
+     "blue   cube top=(+0.348,-0.025,+0.055) px=4675 depth_px=0 [plane+model]",
+     "yellow top=(+0.346,-0.166,+0.055) px=3820 depth_px=0 [plane]",
+     "yellow top=(+0.242,-0.114,+0.055) px=4604 depth_px=0 [plane]",
+     "yellow top=(+0.299,-0.090,+0.055) px=4156 depth_px=0 [plane]",
+     "yellow top=(+0.222,-0.035,+0.055) px=1644 depth_px=0 [plane]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep043_start",
+    "dets": [
+     "blue   cube top=(+0.344,-0.010,+0.055) px=4302 depth_px=0 [plane+model]",
+     "yellow cube top=(+0.255,-0.107,+0.055) px=6746 depth_px=0 [plane+model]",
+     "yellow top=(+0.345,-0.168,+0.055) px=3934 depth_px=0 [plane]",
+     "yellow top=(+0.220,-0.037,+0.055) px=1719 depth_px=0 [plane]",
+     "yellow top=(+0.301,-0.091,+0.055) px=4631 depth_px=0 [plane]"
+    ],
+    "fp": 0
+   }
+  ]
+ },
+ "detector_hue": {
+  "stats": {
+   "n": 30,
+   "found": 16,
+   "fp": 2,
+   "c_ok": 14,
+   "c_unk": 0,
+   "c_wrong": 2,
+   "s_n": 15,
+   "s_ok": 14,
+   "s_unk": 0,
+   "s_wrong": 1,
+   "pts": 21,
+   "ms": 17.760441500286106,
+   "confusions": {
+    "orange->yellow": 1,
+    "orange->blue": 1
+   }
+  },
+  "rows": [
+   {
+    "id": "ep001_start",
+    "dets": [
+     "yellow cube top=(+0.310,+0.053,+0.055) px=6280 depth_px=0 [plane+model]",
+     "red    cube top=(+0.385,-0.118,+0.055) px=3623 depth_px=0 [plane+model]",
+     "yellow cube top=(+0.291,-0.080,+0.055) yaw=-41 px=5252 depth_px=0 [plane]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep007_start",
+    "dets": [
+     "red    cube top=(+0.333,-0.148,+0.055) px=6465 depth_px=0 [plane+model]",
+     "yellow cube top=(+0.309,+0.142,+0.055) px=7127 depth_px=0 [plane+model]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep013_start",
+    "dets": [
+     "yellow cube top=(+0.373,-0.011,+0.055) px=436 depth_px=0 [plane+model]",
+     "yellow cube top=(+0.313,-0.077,+0.055) px=6856 depth_px=0 [plane+model]",
+     "blue   cube top=(+0.323,+0.058,+0.055) px=6230 depth_px=0 [plane+model]"
+    ],
+    "fp": 1
+   },
+   {
+    "id": "ep019_start",
+    "dets": [
+     "blue   cube top=(+0.502,+0.138,+0.055) px=476 depth_px=0 [plane+model]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep025_start",
+    "dets": [
+     "yellow cube top=(+0.437,-0.129,+0.055) px=1789 depth_px=0 [plane+model]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep031_start",
+    "dets": [
+     "yellow cube top=(+0.439,-0.130,+0.055) px=1760 depth_px=0 [plane+model]",
+     "red    cube top=(+0.289,-0.042,+0.055) yaw=+44 px=5920 depth_px=0 [plane]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep037_start",
+    "dets": [
+     "blue   cube top=(+0.352,-0.030,+0.055) px=3878 depth_px=0 [plane+model]",
+     "yellow cylinder top=(+0.300,-0.089,+0.055) px=3973 depth_px=0 [plane]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep043_start",
+    "dets": [
+     "blue   cube top=(+0.344,-0.010,+0.055) px=4134 depth_px=0 [plane+model]",
+     "yellow cylinder top=(+0.304,-0.088,+0.055) px=3846 depth_px=0 [plane]",
+     "blue   triangle top=(+0.358,-0.200,+0.055) px=2259 depth_px=0 [plane+model]",
+     "blue   cube top=(+0.258,+0.195,+0.055) yaw=-1 px=6503 depth_px=0 [plane]"
+    ],
+    "fp": 1
+   }
+  ]
+ },
+ "detector_hue_wb": {
+  "stats": {
+   "n": 30,
+   "found": 16,
+   "fp": 2,
+   "c_ok": 12,
+   "c_unk": 2,
+   "c_wrong": 2,
+   "s_n": 15,
+   "s_ok": 14,
+   "s_unk": 0,
+   "s_wrong": 1,
+   "pts": 17,
+   "ms": 20.607511498383246,
+   "confusions": {
+    "orange->yellow": 2
+   }
+  },
+  "rows": [
+   {
+    "id": "ep001_start",
+    "dets": [
+     "yellow cube top=(+0.310,+0.053,+0.055) px=6280 depth_px=0 [plane+model]",
+     "red    cube top=(+0.385,-0.118,+0.055) px=3623 depth_px=0 [plane+model]",
+     "yellow cube top=(+0.291,-0.080,+0.055) yaw=-41 px=5252 depth_px=0 [plane]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep007_start",
+    "dets": [
+     "red    cube top=(+0.333,-0.148,+0.055) px=6465 depth_px=0 [plane+model]",
+     "yellow cube top=(+0.309,+0.142,+0.055) px=7127 depth_px=0 [plane+model]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep013_start",
+    "dets": [
+     "yellow cube top=(+0.373,-0.011,+0.055) px=436 depth_px=0 [plane+model]",
+     "yellow cube top=(+0.313,-0.077,+0.055) px=6856 depth_px=0 [plane+model]",
+     "None   cube top=(+0.323,+0.058,+0.055) px=6230 depth_px=0 [plane+model]"
+    ],
+    "fp": 1
+   },
+   {
+    "id": "ep019_start",
+    "dets": [
+     "blue   cube top=(+0.502,+0.138,+0.055) px=476 depth_px=0 [plane+model]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep025_start",
+    "dets": [
+     "yellow cube top=(+0.437,-0.129,+0.055) px=1789 depth_px=0 [plane+model]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep031_start",
+    "dets": [
+     "yellow cube top=(+0.439,-0.130,+0.055) px=1760 depth_px=0 [plane+model]",
+     "red    cube top=(+0.289,-0.042,+0.055) yaw=+44 px=5920 depth_px=0 [plane]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep037_start",
+    "dets": [
+     "blue   cube top=(+0.352,-0.030,+0.055) px=3878 depth_px=0 [plane+model]",
+     "yellow cylinder top=(+0.300,-0.089,+0.055) px=3973 depth_px=0 [plane]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep043_start",
+    "dets": [
+     "None   cube top=(+0.344,-0.010,+0.055) px=4134 depth_px=0 [plane+model]",
+     "yellow cylinder top=(+0.304,-0.088,+0.055) px=3846 depth_px=0 [plane]",
+     "yellow triangle top=(+0.358,-0.200,+0.055) px=2259 depth_px=0 [plane+model]",
+     "None   cube top=(+0.258,+0.195,+0.055) yaw=-1 px=6503 depth_px=0 [plane]"
+    ],
+    "fp": 1
+   }
+  ]
+ },
+ "detector_hue_wb_agree": {
+  "stats": {
+   "n": 30,
+   "found": 16,
+   "fp": 2,
+   "c_ok": 10,
+   "c_unk": 5,
+   "c_wrong": 1,
+   "s_n": 15,
+   "s_ok": 14,
+   "s_unk": 0,
+   "s_wrong": 1,
+   "pts": 14,
+   "ms": 20.8090775013261,
+   "confusions": {
+    "orange->yellow": 1
+   }
+  },
+  "rows": [
+   {
+    "id": "ep001_start",
+    "dets": [
+     "yellow cube top=(+0.310,+0.053,+0.055) px=6280 depth_px=0 [plane+model]",
+     "None   cube top=(+0.385,-0.118,+0.055) px=3623 depth_px=0 [plane+model]",
+     "yellow cube top=(+0.291,-0.080,+0.055) yaw=-41 px=5252 depth_px=0 [plane]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep007_start",
+    "dets": [
+     "None   cube top=(+0.333,-0.148,+0.055) px=6465 depth_px=0 [plane+model]",
+     "yellow cube top=(+0.309,+0.142,+0.055) px=7127 depth_px=0 [plane+model]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep013_start",
+    "dets": [
+     "yellow cube top=(+0.373,-0.011,+0.055) px=436 depth_px=0 [plane+model]",
+     "yellow cube top=(+0.313,-0.077,+0.055) px=6856 depth_px=0 [plane+model]",
+     "None   cube top=(+0.323,+0.058,+0.055) px=6230 depth_px=0 [plane+model]"
+    ],
+    "fp": 1
+   },
+   {
+    "id": "ep019_start",
+    "dets": [
+     "blue   cube top=(+0.502,+0.138,+0.055) px=476 depth_px=0 [plane+model]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep025_start",
+    "dets": [
+     "yellow cube top=(+0.437,-0.129,+0.055) px=1789 depth_px=0 [plane+model]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep031_start",
+    "dets": [
+     "yellow cube top=(+0.439,-0.130,+0.055) px=1760 depth_px=0 [plane+model]",
+     "red    cube top=(+0.289,-0.042,+0.055) yaw=+44 px=5920 depth_px=0 [plane]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep037_start",
+    "dets": [
+     "blue   cube top=(+0.352,-0.030,+0.055) px=3878 depth_px=0 [plane+model]",
+     "yellow cylinder top=(+0.300,-0.089,+0.055) px=3973 depth_px=0 [plane]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep043_start",
+    "dets": [
+     "None   cube top=(+0.344,-0.010,+0.055) px=4134 depth_px=0 [plane+model]",
+     "yellow cylinder top=(+0.304,-0.088,+0.055) px=3846 depth_px=0 [plane]",
+     "None   triangle top=(+0.358,-0.200,+0.055) px=2259 depth_px=0 [plane+model]",
+     "None   cube top=(+0.258,+0.195,+0.055) yaw=-1 px=6503 depth_px=0 [plane]"
+    ],
+    "fp": 1
+   }
+  ]
+ },
+ "detector_hue_real": {
+  "stats": {
+   "n": 30,
+   "found": 16,
+   "fp": 2,
+   "c_ok": 15,
+   "c_unk": 0,
+   "c_wrong": 1,
+   "s_n": 15,
+   "s_ok": 14,
+   "s_unk": 0,
+   "s_wrong": 1,
+   "pts": 24,
+   "ms": 16.060427500633523,
+   "confusions": {
+    "orange->blue": 1
+   }
+  },
+  "rows": [
+   {
+    "id": "ep001_start",
+    "dets": [
+     "yellow cube top=(+0.310,+0.053,+0.055) px=6280 depth_px=0 [plane+model]",
+     "red    cube top=(+0.385,-0.118,+0.055) px=3623 depth_px=0 [plane+model]",
+     "yellow cube top=(+0.291,-0.080,+0.055) yaw=-41 px=5252 depth_px=0 [plane]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep007_start",
+    "dets": [
+     "red    cube top=(+0.333,-0.148,+0.055) px=6465 depth_px=0 [plane+model]",
+     "yellow cube top=(+0.309,+0.142,+0.055) px=7127 depth_px=0 [plane+model]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep013_start",
+    "dets": [
+     "red    cube top=(+0.373,-0.011,+0.055) px=436 depth_px=0 [plane+model]",
+     "red    cube top=(+0.313,-0.077,+0.055) px=6856 depth_px=0 [plane+model]",
+     "blue   cube top=(+0.323,+0.058,+0.055) px=6230 depth_px=0 [plane+model]"
+    ],
+    "fp": 1
+   },
+   {
+    "id": "ep019_start",
+    "dets": [
+     "blue   cube top=(+0.502,+0.138,+0.055) px=476 depth_px=0 [plane+model]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep025_start",
+    "dets": [
+     "yellow cube top=(+0.437,-0.129,+0.055) px=1789 depth_px=0 [plane+model]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep031_start",
+    "dets": [
+     "yellow cube top=(+0.439,-0.130,+0.055) px=1760 depth_px=0 [plane+model]",
+     "red    cube top=(+0.289,-0.042,+0.055) yaw=+44 px=5920 depth_px=0 [plane]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep037_start",
+    "dets": [
+     "blue   cube top=(+0.352,-0.030,+0.055) px=3878 depth_px=0 [plane+model]",
+     "yellow cylinder top=(+0.300,-0.089,+0.055) px=3973 depth_px=0 [plane]"
+    ],
+    "fp": 0
+   },
+   {
+    "id": "ep043_start",
+    "dets": [
+     "blue   cube top=(+0.344,-0.010,+0.055) px=4134 depth_px=0 [plane+model]",
+     "yellow cylinder top=(+0.304,-0.088,+0.055) px=3846 depth_px=0 [plane]",
+     "blue   triangle top=(+0.358,-0.200,+0.055) px=2259 depth_px=0 [plane+model]",
+     "blue   cube top=(+0.258,+0.195,+0.055) yaw=-1 px=6503 depth_px=0 [plane]"
+    ],
+    "fp": 1
+   }
+  ]
+ }
+}

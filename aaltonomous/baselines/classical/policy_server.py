@@ -8,7 +8,8 @@ Same planner/perception as run.py / sim_eval.py (no forked logic). It runs threa
 motion comes back in `motion.chunk`-tick chunks. It returns "done" when nothing sortable is left.
 Uses only head_rgb, head_depth, arm_q, hand_q, t from obs; camera intrinsics/extrinsics come from the
 calibration.yaml baked into the image (spec §11), so rebuild after a calibration change.
-Rung 1 only: the colour -> bin mapping is scene.yaml's, whatever the instruction says.
+Mapping: task sort_fixed -> the fixed rung-1 mapping; sort_language (or no task) -> instruction.parse_instruction
+(rule-based; anything it is unsure about stays unmapped = left on the counter); insert_shapes -> nothing to sort.
 Env: AALTO_TIME_LIMIT (s, default 120; must match the runner's --time-limit), AALTO_ARM_VEL (rad/s override),
 AALTO_PROFILE (config.yaml profile; default `sim` = sim-tuned, `none` = robot base values).
 """
@@ -46,10 +47,8 @@ class ClassicalServerPolicy(Policy):
         job, t0 = self.pol._job, time.monotonic()
         while job is not None and job["result"] is None and time.monotonic() - t0 < 30.0:
             time.sleep(0.02)
-        if task not in (None, "sort_fixed"):
-            log.warning("task %r: the classical baseline only does rung 1 (colour = bin from scene.yaml)", task)
-        self.pol.reset({"instruction": instruction})
-        log.info("reset task=%s seed=%s instruction=%r", task, seed, instruction)
+        self.pol.reset({"instruction": instruction, "task": task})
+        log.info("reset task=%s seed=%s instruction=%r mapping=%s", task, seed, instruction, self.pol.mapping)
 
     def act(self, obs):
         a = self.pol.act(obs)
