@@ -78,11 +78,21 @@ class AaltoRuntime:
             self.clock.setsockopt(zmq.SNDHWM, 10)
             self.clock.bind(f"tcp://*:{cp}")
             print(f"[aalto] sim clock on tcp :{cp}")
+        # Dex3 contact stream (AALTO_HAND_CONTACTS=1 scene): zmq PUB, one JSON message per env step (see _publish_contacts)
+        self.contact_keys = [k for k in env.scene.keys() if k.startswith("contact_")]
+        self.contacts_pub = None
+        ctp = int(os.environ.get("AALTO_CONTACT_PORT", str(sp + 2 if sp else 0)))
+        if self.contact_keys and ctp:
+            self.contacts_pub = self.ctx.socket(zmq.PUB)
+            self.contacts_pub.setsockopt(zmq.LINGER, 0)
+            self.contacts_pub.setsockopt(zmq.SNDHWM, 20)
+            self.contacts_pub.bind(f"tcp://*:{ctp}")
+            print(f"[aalto] Dex3 PhysX contact stream on tcp :{ctp} ({len(self.contact_keys)} link sensors)")
         self.step_dt = float(env.step_dt)
         self.sim_t = 0.0
         self.rtf = self.rtf_mean = None
         self._win = self._start = None            # (wall, sim_t) at window / clock start
-        self.ports = {"scene": sp, "rgbd": rp, "clock": cp}
+        self.ports = {"scene": sp, "rgbd": rp, "clock": cp, "contacts": ctp if self.contacts_pub is not None else 0}
         if self.dr_cfg:
             print(f"[aalto] domain randomization ON: {self.dr_cfg['_path']}")
 
@@ -185,6 +195,30 @@ class AaltoRuntime:
                 self.rep.send(json.dumps(resp).encode())
         if self.rgbd is not None:
             self._publish_rgbd(env)
+        if self.contacts_pub is not None:
+            self._publish_contacts(env)
+
+    def _publish_contacts(self, env, eps=0.05):
+        """{"t": sim_t, "c": {"left_palm": {"net": N, "obj": {name: N}, "other": N, "fz_obj": N}, ...}} with the PhysX
+        NORMAL contact forces of each Dex3 link (newtons, world frame): `obj` = force against each object (only those
+        above eps), `other` = |net - sum(obj)| = table, lid, bins, the other hand. Links without contact are omitted."""
+        out = {}
+        for k in self.contact_keys:
+            d = env.scene[k].data
+            net = _t(d.net_normal_forces_w)[0, 0].cpu().numpy()
+            fm = d.normal_force_matrix_w
+            mat = _t(fm)[0, 0].cpu().numpy() if fm is not None else np.zeros((0, 3))
+            nn = float(np.linalg.norm(net))
+            if nn < eps and (not len(mat) or float(np.abs(mat).max()) < eps):
+                continue
+            objs = {self.names[i]: round(float(np.linalg.norm(f)), 3) for i, f in enumerate(mat) if np.linalg.norm(f) >= eps}
+            other = float(np.linalg.norm(net - mat.sum(0))) if len(mat) else nn
+            out[k[len("contact_"):]] = {"net": round(nn, 3), "obj": objs, "other": round(other, 3),
+                                        "fz_obj": round(float(mat[:, 2].sum()), 3) if len(mat) else 0.0}
+        try:
+            self.contacts_pub.send(json.dumps({"t": round(self.sim_t, 4), "c": out}).encode(), self.zmq.NOBLOCK)
+        except self.zmq.Again:
+            pass
 
     def _publish_rgbd(self, env):
         from tasks.common_observations.camera_state import _camera_frame

@@ -1,0 +1,36 @@
+cube@0        gap 15mm xc 0.075 --  pre_table 0.3 {'thumb': ('TABL', None, None, None), 'middle': ('cont', 16.6, 4.1, [-0.635, -1.243]), 'index': ('cont', 15.8, 4.1, [-0.635, -1.243])}
+cube@0        gap 15mm xc 0.08 --  pre_table 0.3 {'thumb': ('TABL', None, None, None), 'middle': ('cont', 24.4, 5.2, [-0.582, -1.203]), 'index': ('cont', 19.0, 5.2, [-0.582, -1.203])}
+cube@0        gap 15mm xc 0.085 --  pre_table 0.3 {'thumb': ('TABL', None, None, None), 'middle': ('cont', 32.5, 6.8, [-0.53, -1.163]), 'index': ('cont', 27.0, 6.8, [-0.53, -1.163])}
+cube@0        gap 15mm xc 0.09 --  pre_table 0.3 {'thumb': ('TABL', None, None, None), 'middle': ('cont', 40.2, 10.5, [-0.442, -1.097]), 'index': ('cont', 37.4, 10.5, [-0.442, -1.097])}
+cube@0        gap 20mm xc 0.075 OK  pre_table 5.3 {'thumb': ('cont', 8.3, 6.1, [0.0, -0.433, 1.729]), 'middle': ('cont', 21.6, 9.1, [-0.635, -1.243]), 'index': ('cont', 20.8, 9.1, [-0.635, -1.243])}
+cube@0        gap 20mm xc 0.08 OK  pre_table 5.3 {'thumb': ('cont', 9.2, 7.4, [0.0, -0.34, 1.7]), 'middle': ('cont', 29.4, 10.2, [-0.582, -1.203]), 'index': ('cont', 24.0, 10.2, [-0.582, -1.203])}
+cube@0        gap 20mm xc 0.085 OK  pre_table 5.3 {'thumb': ('cont', 11.2, 8.7, [0.0, -0.247, 1.671]), 'middle': ('cont', 37.5, 11.8, [-0.53, -1.163]), 'index': ('cont', 32.0, 11.8, [-0.53, -1.163])}
+cube@0        gap 20mm xc 0.09 OK  pre_table 5.3 {'thumb': ('cont', 13.5, 10.1, [0.0, -0.14, 1.638]), 'middle': ('cont', 44.2, 15.5, [-0.442, -1.097]), 'index': ('cont', 42.4, 15.5, [-0.442, -1.097])}
+cube@0        gap 25mm xc 0.075 OK  pre_table 10.3 {'thumb': ('cont', 13.3, 11.1, [0.0, -0.433, 1.729]), 'middle': ('cont', 26.6, 14.1, [-0.635, -1.243]), 'index': ('cont', 25.8, 14.1, [-0.635, -1.243])}
+cube@0        gap 25mm xc 0.08 OK  pre_table 10.3 {'thumb': ('cont', 14.2, 12.4, [0.0, -0.34, 1.7]), 'middle': ('cont', 34.4, 15.2, [-0.582, -1.203]), 'index': ('cont', 29.0, 15.2, [-0.582, -1.203])}
+cube@0        gap 25mm xc 0.085 OK  pre_table 10.3 {'thumb': ('cont', 16.2, 13.7, [0.0, -0.247, 1.671]), 'middle': ('cont', 38.3, 16.8, [-0.53, -1.163]), 'index': ('cont', 35.7, 16.8, [-0.53, -1.163])}
+cube@0        gap 25mm xc 0.09 OK  pre_table 10.3 {'thumb': ('cont', 18.5, 15.1, [0.0, -0.14, 1.638]), 'middle': ('cont', 41.1, 19.7, [-0.46, -1.11]), 'index': ('cont', 41.6, 19.7, [-0.46, -1.11])}
+cylinder@0    gap 15mm xc 0.075 --  pre_table 0.3 {'thumb': ('TABL', None, None, None), 'middle': ('cont', 19.0, 3.8, [-0.792, -1.363]), 'index': ('cont', 15.2, 3.6, [-0.775, -1.35])}
+cylinder@0    gap 15mm xc 0.08 --  pre_table 0.3 {'thumb': ('TABL', None, None, None), 'middle': ('cont', 16.1, 3.4, [-0.722, -1.31]), 'index': ('cont', 14.9, 3.4, [-0.722, -1.31])}
+cylinder@0    gap 15mm xc 0.085 --  pre_table 0.3 {'thumb': ('TABL', None, None, None), 'middle': ('cont', 25.1, 3.6, [-0.67, -1.27]), 'index': ('cont', 20.2, 3.6, [-0.67, -1.27])}
+cylinder@0    gap 15mm xc 0.09 --  pre_table 0.3 {'thumb': ('TABL', None, None, None), 'middle': ('cont', 40.3, 5.2, [-0.582, -1.203]), 'index': ('cont', 39.8, 4.8, [-0.6, -1.217])}
+cylinder@0    gap 20mm xc 0.075 OK  pre_table 5.3 {'thumb': ('cont', 9.1, 6.1, [0.0, -0.433, 1.729]), 'middle': ('cont', 24.0, 8.8, [-0.792, -1.363]), 'index': ('cont', 20.2, 8.6, [-0.775, -1.35])}
+cylinder@0    gap 20mm xc 0.08 OK  pre_table 5.3 {'thumb': ('cont', 10.0, 7.4, [0.0, -0.34, 1.7]), 'middle': ('cont', 21.1, 8.4, [-0.722, -1.31]), 'index': ('cont', 19.9, 8.4, [-0.722, -1.31])}
+cylinder@0    gap 20mm xc 0.085 OK  pre_table 5.3 {'thumb': ('cont', 12.0, 8.7, [0.0, -0.247, 1.671]), 'middle': ('cont', 30.1, 8.6, [-0.67, -1.27]), 'index': ('cont', 25.2, 8.6, [-0.67, -1.27])}
+cylinder@0    gap 20mm xc 0.09 OK  pre_table 5.3 {'thumb': ('cont', 13.3, 10.1, [0.0, -0.14, 1.638]), 'middle': ('cont', 44.9, 10.2, [-0.582, -1.203]), 'index': ('cont', 43.9, 9.8, [-0.6, -1.217])}
+cylinder@0    gap 25mm xc 0.075 OK  pre_table 10.3 {'thumb': ('cont', 14.1, 11.1, [0.0, -0.433, 1.729]), 'middle': ('cont', 29.0, 13.8, [-0.792, -1.363]), 'index': ('cont', 25.2, 13.6, [-0.775, -1.35])}
+cylinder@0    gap 25mm xc 0.08 OK  pre_table 10.3 {'thumb': ('cont', 15.0, 12.4, [0.0, -0.34, 1.7]), 'middle': ('cont', 26.1, 13.4, [-0.722, -1.31]), 'index': ('cont', 24.9, 13.4, [-0.722, -1.31])}
+cylinder@0    gap 25mm xc 0.085 OK  pre_table 10.3 {'thumb': ('cont', 17.0, 13.7, [0.0, -0.247, 1.671]), 'middle': ('cont', 30.6, 13.6, [-0.67, -1.27]), 'index': ('cont', 30.2, 13.6, [-0.67, -1.27])}
+cylinder@0    gap 25mm xc 0.09 OK  pre_table 10.3 {'thumb': ('cont', 18.3, 15.1, [0.0, -0.14, 1.638]), 'middle': ('cont', 33.4, 14.4, [-0.617, -1.23]), 'index': ('cont', 33.5, 14.4, [-0.617, -1.23])}
+triangle@180  gap 15mm xc 0.075 --  pre_table 0.3 {'thumb': ('TABL', None, None, None), 'middle': ('cont', 15.2, 3.4, [-0.705, -1.297]), 'index': ('cont', 14.9, 3.4, [-0.705, -1.297])}
+triangle@180  gap 15mm xc 0.08 --  pre_table 0.3 {'thumb': ('TABL', None, None, None), 'middle': ('cont', 15.1, 3.8, [-0.652, -1.257]), 'index': ('cont', 15.5, 3.8, [-0.652, -1.257])}
+triangle@180  gap 15mm xc 0.085 --  pre_table 0.3 {'thumb': ('TABL', None, None, None), 'middle': ('cont', 18.9, 4.8, [-0.6, -1.217]), 'index': ('cont', 20.9, 4.8, [-0.6, -1.217])}
+triangle@180  gap 15mm xc 0.09 --  pre_table 0.3 {'thumb': ('TABL', None, None, None), 'middle': ('cont', 29.0, 6.2, [-0.548, -1.177]), 'index': ('cont', 26.1, 6.2, [-0.548, -1.177])}
+triangle@180  gap 20mm xc 0.075 --  pre_table 5.3 {'thumb': ('cont', 9.2, 5.5, [0.0, -0.487, 1.746]), 'middle': ('cont', 20.2, 8.4, [-0.705, -1.297]), 'index': ('cont', 19.9, 8.4, [-0.705, -1.297])}
+triangle@180  gap 20mm xc 0.08 OK  pre_table 5.3 {'thumb': ('cont', 5.8, 5.8, [0.0, -0.46, 1.738]), 'middle': ('cont', 20.1, 8.8, [-0.652, -1.257]), 'index': ('cont', 20.5, 8.8, [-0.652, -1.257])}
+triangle@180  gap 20mm xc 0.085 OK  pre_table 5.3 {'thumb': ('cont', 7.2, 7.0, [0.0, -0.367, 1.708]), 'middle': ('cont', 23.9, 9.8, [-0.6, -1.217]), 'index': ('cont', 25.9, 9.8, [-0.6, -1.217])}
+triangle@180  gap 20mm xc 0.09 OK  pre_table 5.3 {'thumb': ('cont', 9.0, 8.3, [0.0, -0.273, 1.679]), 'middle': ('cont', 34.0, 11.2, [-0.548, -1.177]), 'index': ('cont', 31.1, 11.2, [-0.548, -1.177])}
+triangle@180  gap 25mm xc 0.075 --  pre_table 10.3 {'thumb': ('cont', 14.2, 10.5, [0.0, -0.487, 1.746]), 'middle': ('cont', 25.2, 13.4, [-0.705, -1.297]), 'index': ('cont', 24.9, 13.4, [-0.705, -1.297])}
+triangle@180  gap 25mm xc 0.08 OK  pre_table 10.3 {'thumb': ('cont', 10.8, 10.8, [0.0, -0.46, 1.738]), 'middle': ('cont', 25.1, 13.8, [-0.652, -1.257]), 'index': ('cont', 25.5, 13.8, [-0.652, -1.257])}
+triangle@180  gap 25mm xc 0.085 OK  pre_table 10.3 {'thumb': ('cont', 12.2, 12.0, [0.0, -0.367, 1.708]), 'middle': ('cont', 28.9, 14.8, [-0.6, -1.217]), 'index': ('cont', 30.9, 14.8, [-0.6, -1.217])}
+triangle@180  gap 25mm xc 0.09 OK  pre_table 10.3 {'thumb': ('cont', 14.0, 13.3, [0.0, -0.273, 1.679]), 'middle': ('cont', 37.9, 16.2, [-0.548, -1.177]), 'index': ('cont', 36.1, 16.2, [-0.548, -1.177])}

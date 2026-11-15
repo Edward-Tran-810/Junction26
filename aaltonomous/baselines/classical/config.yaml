@@ -140,7 +140,58 @@ grasp:
   # object at its mid-height. The planner refuses any grasp whose lowest hand point would be below the counter and reports
   # the measured clearance (see grasp.side). The legacy top-down claw documented below is DISABLED: it is only reachable with
   # mode: topdown AND AALTO_ALLOW_LEGACY_TOPDOWN=1 (reproducing old evidence), never as a silent fallback.
-  mode: side
+  # 2026-11-15 (user request): TOP-DOWN ONLY. topdown = near-contact top-down three-finger grasp (grasp.topdown below);
+  # side = the side grasp (kept, not used); topdown_legacy = old fingertip claw (AALTO_ALLOW_LEGACY_TOPDOWN=1 only).
+  mode: topdown
+  topdown:
+    # Geometry from experiments/topdown_contact (URDF collision meshes + table plane, posture_v1_check.txt). TRUE palm
+    # contact with the object top is geometrically infeasible for the 45 mm objects (the 98 mm thumb cannot get beside
+    # the object without hitting the table), so this is a NEAR-CONTACT grasp: the palm pad stops `gap` above the top.
+    pad_y: 0.0202               # m: palm contact pad below the palm-link origin (palm -y face, NOT the wrist origin)
+    gap: 0.032                  # m: palm pad above the object top at the grasp. 0.022 (offline 7 mm thumb clearance) hit the
+                                # table in Isaac (t2/t3: thumb 2.8-3.1 N at measured pad height 65 mm): sim thumb ~6 mm lower
+                                # than the URDF + ~4 mm descent lag. Offline window still OK at 0.028-0.035 (posture_check)
+    palm_x: 0.082               # m: object centre along the palm (offline window 0.075-0.090 cube/cyl, 0.080-0.090 prism)
+    preshape_posture: td_pre    # hand.<name>: fingers open + thumb tucked back while descending
+    closed_posture: td_contact  # hand.<name>: planned contact posture (used for the plan's clearance checks)
+    goal_posture: td_goal       # hand.<name>: squeeze direction target; the policy closes TOWARDS it, lead-limited
+    fingertip_clearance: 0.004  # m: preshaped hand above the counter at the grasp pose (URDF points)
+    max_tilt_deg: 8.0           # palm tilt allowed by the IK for top-down plans (ik.max_tilt_deg is 35 in the sim profile;
+                                # the first cube test planned 29 deg, which voids the level-palm thumb clearance)
+    guard_height: 0.03          # m: fast approach ends this far above the grasp height; the rest is the guarded descent
+    pregrasp_above: null        # m above the grasp height for the pregrasp (null = legacy max(z + approach_height, carry))
+    descend_speed: null         # m/s hand speed of the guarded descent (null = joint speed descend_vel)
+    transit_clearance: null     # m: hand points over the counter during to_pregrasp stay this high (null = counter_clearance)
+    descend_vel: 0.08           # rad/s joint speed for the guarded descent (~3-4 cm/s at the hand)
+    lift_vel: 0.3               # rad/s for the small verification lift
+    verify_lift: 0.025          # m: small lift, then grasp verification, then the rest of the lift
+    face_align:                 # finger direction from the object's faces (perception yaw convention, planner)
+      enabled: true
+      shapes:
+        cube: {offset_deg: 0, n: 4}                            # fingers on one face, thumb on the opposite face
+        triangle: {offset_deg: 270, n: 3, support_shift: false} # fingers on the flat face, thumb on the apex (apex -> wrist)
+      finger_ref_deg: {left: 0.0, right: 0.0}
+      max_dev_deg: 70
+      tol_deg: 8.0
+      hint_weight: 3.0
+    guard:                      # policy: guarded descent
+      contacts_for_control: false   # false (deployable): PhysX contacts (sim only) are LOGGED for diagnosis, never used
+                                    # for decisions; the descent guard is proprioceptive (proprio_block_rad)
+      proprio_block_rad: 0.03   # a hand joint this far off its constant command during the descent = blocked -> stop
+      chunk: 2                  # ticks per act() while descending / closing (check every 66 ms)
+      object_n: 0.3             # N: hand-object normal force that counts as contact
+      other_n: 1.0              # N: hand-other (table / bin / lid) force = unexpected collision -> stop
+      confirm_msgs: 3           # consecutive contact messages (100 Hz) before contact is confirmed (noise rejection)
+      max_force_n: 15.0         # N: any hand link above this -> stop moving down
+    squeeze:                    # policy: capped three-finger closure (holding effort within the Dex3 limits)
+      kp: 100.0                 # sim hand PD stiffness (upstream robots/unitree.py, unchanged)
+      tau_max: [2.45, 1.4, 1.4, 1.4, 1.4, 1.4, 1.4]   # N m, URDF effort limits (thumb0..2, then the two fingers)
+      torque_frac: 0.85         # commanded holding torque = frac x tau_max, i.e. lead = frac * tau_max / kp per joint
+      approach_frac: 0.85       # fast ramp to this fraction of preshape -> contact posture, then lead-limited
+      settle_s: 0.4             # contacts + joints steady this long -> closed
+      max_s: 6.0                # closing gives up waiting after this (verification decides). 3.0 timed out every closing
+                                # (t6-t9): a FREE joint creeps at ~kp*L/kd = 0.12 rad/s; the cylinder thumb (t9) never arrived
+      need: [thumb, finger]     # contact groups required before lifting (finger = index or middle)
   side:
     approach_dist: 0.08         # m: pre-grasp point = grasp point moved back along the palm normal
     lateral: 0.014              # m: object centre below the hand centre line (thumb at the centre line, pinch finger 28.5 mm below it)
@@ -236,6 +287,12 @@ hand:                          # LEFT order: thumb0, thumb1, thumb2, middle0, mi
   # along its arc takes one edge out, so the object can drop (thumb stays back + up, out of the way).
   scissor_a: [0.0, -0.5, 1.5, -0.05, -0.05, -1.0, -0.6]
   scissor_b: [0.0, -0.5, 1.5, -1.0, -0.6, -0.05, -0.05]
+  # top-down near-contact postures (experiments/topdown_contact/posture_check.py, posture_v1_check.txt)
+  td_pre:     [0.0, -0.5, 1.65, -0.25, -0.95, -0.25, -0.95]   # thumb back + tucked, fingers forward + half curled. thumb_2
+              # 1.65 = what the Isaac joint REACHES: commanded 1.72 it stops at 1.658 (t5, 0.062 rad short), which hung the
+              # thumb_2 link 2.8 mm lower than planned (with ~4.4 mm arm sag: the t1-t3 thumb-table contacts)
+  td_contact: [0.0, -0.34, 1.70, -0.60, -1.22, -0.60, -1.22]  # offline first contact at palm_x 0.08 (cube): plan checks
+  td_goal:    [0.0, 0.30, 1.50, -1.30, -1.72, -1.30, -1.72]   # squeeze direction (never reached on an object)
   right: null                  # optional explicit right-hand postures {open, preshape, closed} in RIGHT DDS order
 
 # Closed-loop grasp verification (policy.py `_step_exec`, grasp_monitor.py). The only contact feedback is the

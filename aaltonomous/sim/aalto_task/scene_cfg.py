@@ -14,6 +14,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import os
+
 import numpy as np
 import yaml
 
@@ -294,9 +296,25 @@ def _fixed_cfgs():
     }
 
 
+# PhysX contact reporting on the Dex3 links (topdown-contact branch). OFF unless AALTO_HAND_CONTACTS=1, so the default
+# scene is unchanged. Isaac Lab filters contacts only when a sensor matches ONE prim, hence one sensor per link, each
+# filtered against every object: force vs. each object, and net - objects = table / lid / bins / other hand.
+HAND_CONTACT_LINKS = ("palm", "thumb_1", "thumb_2", "index_0", "index_1", "middle_0", "middle_1")
+
+
+def hand_contact_cfgs():
+    from isaaclab.sensors import ContactSensorCfg
+    objs = [f"{ENV}/{n}" for n in object_names(SC)]
+    return {f"contact_{s}_{l}": ContactSensorCfg(prim_path=f"{ENV}/Robot/{s}_hand_{l}_link", filter_prim_paths_expr=objs,
+                                                 update_period=0.0, history_length=0)
+            for s in ("left", "right") for l in HAND_CONTACT_LINKS}
+
+
 def make_scene_cfg_class(name="AaltoSceneCfg", lid=False):
     """InteractiveSceneCfg subclass with every entity as a dataclass field (InteractiveScene reads fields only)."""
     attrs = {**_fixed_cfgs(), **bin_cfgs(), **object_cfgs()}
+    if os.environ.get("AALTO_HAND_CONTACTS") == "1":
+        attrs.update(hand_contact_cfgs())
     if lid:
         attrs["lid"] = lid_cfg()
     ns = dict(attrs)

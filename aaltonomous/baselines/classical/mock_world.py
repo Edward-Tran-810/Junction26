@@ -175,7 +175,7 @@ class RenderMockBackend(MockBackend):
     name = "mock"
 
     def __init__(self, scene, cal, kin, postures, attach_radius=0.04, depth_noise_mm=1.0, hole_frac=0.02, seed=0,
-                 contact_err=0.02, faults=None, **kw):
+                 contact_err=0.02, faults=None, grasp_postures=("open", "closed"), stop_posture=None, **kw):
         """contact_err (rad): finger tracking error reported while an object is between the fingers (a position-
         controlled finger stops on the object, short of the commanded posture; the Isaac sim shows 0.02-0.07 rad per
         loaded joint). 0 = the old ideal fingers (the policy's grasp verification then sees an empty hand).
@@ -183,6 +183,10 @@ class RenderMockBackend(MockBackend):
         hand closes in the episode) at which the grasp misses, the object falls out during the carry, or the object
         stays wedged in the opened hand until the fingers scissor (the four failure modes seen in Isaac)."""
         super().__init__(**kw)
+        # grasp_postures: (open, closed) names whose closure fraction defines a closing event; stop_posture (top-down):
+        # with an object held the fingers STOP at this posture (a physical stop, like the Isaac sim) instead of the
+        # fixed contact_err lag, so a lead-limited squeeze command (measured + lead) is not chased open.
+        self.gp, self.stop_posture = grasp_postures, stop_posture
         self.contact_err = float(contact_err)
         self.faults = {k: set(v) for k, v in (faults or {}).items()}
         self.n_close = 0                        # closing events so far
@@ -220,8 +224,16 @@ class RenderMockBackend(MockBackend):
             if self.held[side] is None or not self.contact_err:
                 continue
             sl = slice(0, 7) if side == "left" else slice(7, 14)
-            o, c = self.post["open"][sl], self.post["closed"][sl]
+            o, c = self.post[self.gp[0]][sl], self.post[self.gp[1]][sl]
             back = np.sign(o - c)                # towards open
+            if self.stop_posture is not None and not self.stuck[side]:
+                st = self.post[self.stop_posture][sl]
+                d = np.sign(c - o)               # closing direction per joint
+                q = hand_q[sl].copy()
+                past = (q - st) * d > 0          # commanded beyond the stop -> the finger rests on the object
+                q[past] = st[past]
+                hand_q[sl] = q
+                continue
             if self.stuck[side]:                 # opened hand, object hooked between the two long fingers
                 hand_q[sl][3:] -= self.contact_err * np.array([1.0, 0.5, -1.0, -0.5]) * np.sign(c - o)[3:]
             else:                                # closed on the object: thumb 1, 2 and the four finger joints stall
@@ -236,7 +248,7 @@ class RenderMockBackend(MockBackend):
 
     def _closure(self, side):
         sl = slice(0, 7) if side == "left" else slice(7, 14)
-        o, c = self.post["open"][sl], self.post["closed"][sl]
+        o, c = self.post[self.gp[0]][sl], self.post[self.gp[1]][sl]
         return float((self.hand_q[sl] - o) @ (c - o) / ((c - o) @ (c - o)))
 
     def advance(self, dt):
@@ -317,6 +329,14 @@ def make_mock_env(scene_path=None, seed=0, cfg=None, realtime=False, task="sort_
     env = AaltoEnv(backend="mock", task=task, seed=seed, realtime=realtime)
     if scene_path is not None:
         env.scene = Scene.load(scene_path)
-    env.backend = RenderMockBackend(env.scene, Calibration.load(), ArmKinematics(cfg), hand_postures(cfg),
+    kin = ArmKinematics(cfg)
+    if cfg["grasp"].get("mode") == "topdown":     # mock grasp model for the near-contact top-down grasp
+        td = cfg["grasp"]["topdown"]
+        H = env.scene.object_height()
+        p = np.array([float(td["palm_x"]), -(float(td["pad_y"]) + float(td["gap"]) + H / 2), 0.0])
+        kin.offset = {"left": p, "right": p * np.array([1.0, -1.0, 1.0])}
+        backend_kw.setdefault("grasp_postures", (td["preshape_posture"], td["closed_posture"]))
+        backend_kw.setdefault("stop_posture", td["closed_posture"])
+    env.backend = RenderMockBackend(env.scene, Calibration.load(), kin, hand_postures(cfg),
                                     seed=seed, **backend_kw)
     return env

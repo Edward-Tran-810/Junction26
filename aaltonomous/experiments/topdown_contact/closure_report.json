@@ -1,0 +1,265 @@
+{
+ "cube@0": {
+  "0.060": {
+   "groups": {
+    "thumb": null,
+    "middle": null,
+    "index": null
+   },
+   "all3": false,
+   "opposed": false
+  },
+  "0.065": {
+   "groups": {
+    "thumb": null,
+    "middle": null,
+    "index": {
+     "pre": [
+      -0.316,
+      -1.73
+     ],
+     "target": [
+      -0.736,
+      -1.733
+     ],
+     "q_contact": [
+      -0.512,
+      -1.731
+     ],
+     "contact_h_above_table_mm": 12.4,
+     "contact_dx_mm": 21.9,
+     "f": 0.47
+    }
+   },
+   "all3": false,
+   "opposed": false
+  },
+  "0.070": {
+   "groups": {
+    "thumb": null,
+    "middle": {
+     "pre": [
+      -0.001,
+      -1.737
+     ],
+     "target": [
+      -1.234,
+      -1.73
+     ],
+     "q_contact": [
+      -0.412,
+      -1.735
+     ],
+     "contact_h_above_table_mm": 14.1,
+     "contact_dx_mm": 22.2,
+     "f": 0.33
+    },
+    "index": {
+     "pre": [
+      -0.255,
+      -0.359
+     ],
+     "target": [
+      -1.416,
+      -0.32
+     ],
+     "q_contact": [
+      -0.564,
+      -0.348
+     ],
+     "contact_h_above_table_mm": 40.7,
+     "contact_dx_mm": 22.3,
+     "f": 0.27
+    }
+   },
+   "all3": false,
+   "opposed": false
+  }
+ },
+ "cylinder@0": {
+  "0.060": {
+   "groups": {
+    "thumb": null,
+    "middle": null,
+    "index": null
+   },
+   "all3": false,
+   "opposed": false
+  },
+  "0.065": {
+   "groups": {
+    "thumb": null,
+    "middle": null,
+    "index": null
+   },
+   "all3": false,
+   "opposed": false
+  },
+  "0.070": {
+   "groups": {
+    "thumb": null,
+    "middle": null,
+    "index": null
+   },
+   "all3": false,
+   "opposed": false
+  }
+ },
+ "triangle@0": {
+  "0.060": {
+   "groups": {
+    "thumb": null,
+    "middle": null,
+    "index": null
+   },
+   "all3": false,
+   "opposed": false
+  },
+  "0.065": {
+   "groups": {
+    "thumb": null,
+    "middle": null,
+    "index": null
+   },
+   "all3": false,
+   "opposed": false
+  },
+  "0.070": {
+   "groups": {
+    "thumb": null,
+    "middle": null,
+    "index": null
+   },
+   "all3": false,
+   "opposed": false
+  }
+ },
+ "triangle@180": {
+  "0.060": {
+   "groups": {
+    "thumb": null,
+    "middle": null,
+    "index": null
+   },
+   "all3": false,
+   "opposed": false
+  },
+  "0.065": {
+   "groups": {
+    "thumb": null,
+    "middle": null,
+    "index": null
+   },
+   "all3": false,
+   "opposed": false
+  },
+  "0.070": {
+   "groups": {
+    "thumb": null,
+    "middle": {
+     "pre": [
+      -0.217,
+      -1.744
+     ],
+     "target": [
+      -1.454,
+      -1.706
+     ],
+     "q_contact": [
+      -0.547,
+      -1.734
+     ],
+     "contact_h_above_table_mm": 10.0,
+     "contact_dx_mm": 14.9,
+     "f": 0.27
+    },
+    "index": {
+     "pre": [
+      -0.204,
+      -1.059
+     ],
+     "target": [
+      -0.717,
+      -0.019
+     ],
+     "q_contact": [
+      -0.7,
+      -0.053
+     ],
+     "contact_h_above_table_mm": 43.6,
+     "contact_dx_mm": 14.8,
+     "f": 0.97
+    }
+   },
+   "all3": false,
+   "opposed": false
+  }
+ },
+ "fallen_cylinder@90": {
+  "0.060": {
+   "groups": {
+    "thumb": null,
+    "middle": null,
+    "index": null
+   },
+   "all3": false,
+   "opposed": false
+  },
+  "0.065": {
+   "groups": {
+    "thumb": null,
+    "middle": null,
+    "index": null
+   },
+   "all3": false,
+   "opposed": false
+  },
+  "0.070": {
+   "groups": {
+    "thumb": null,
+    "middle": {
+     "pre": [
+      -0.125,
+      -1.687
+     ],
+     "target": [
+      -0.526,
+      -1.7
+     ],
+     "q_contact": [
+      -0.473,
+      -1.698
+     ],
+     "contact_h_above_table_mm": 14.2,
+     "contact_dx_mm": 22.1,
+     "f": 0.87
+    },
+    "index": {
+     "pre": [
+      -0.224,
+      -1.517
+     ],
+     "target": [
+      -0.519,
+      -1.714
+     ],
+     "q_contact": [
+      -0.479,
+      -1.688
+     ],
+     "contact_h_above_table_mm": 15.5,
+     "contact_dx_mm": 22.0,
+     "f": 0.87
+    }
+   },
+   "all3": false,
+   "opposed": false
+  }
+ },
+ "_meta": {
+  "table_y_in_palm": -0.0656,
+  "palm_pad_y": -0.0201,
+  "samples_per_group": 3000,
+  "note": "contact_h = mean height of the contact above the table (45 mm = top edge); contact_dx = x offset from object centre"
+ }
+}

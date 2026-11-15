@@ -34,6 +34,8 @@ from .grasp_monitor import GraspMonitor, side_slice
 from .kinematics import ArmKinematics
 from .perception import Perception
 from .planner import Planner, ramp, time_scale
+from .contacts import ContactStream, contact_port
+from .topdown_exec import TopDownExec
 
 HZ = 30.0
 
@@ -60,6 +62,14 @@ class ClassicalPolicy:
         self.perception = Perception(self.cfg, self.scene, self.cal)
         self.planner = Planner(self.cfg, self.scene, self.post, self.home, self.kin, self.safety, self.spec)
         self.monitor = GraspMonitor(self.cfg)       # closed-loop grasp / transit / release checks (config `verify`)
+        # grasp.mode=topdown: guarded descent + capped squeeze (topdown_exec.py). PhysX contact stream only when the sim
+        # publishes one (AALTO_HAND_CONTACTS=1 / AALTO_CONTACT_PORT); otherwise the near-contact height trigger alone.
+        self.contacts = ContactStream() if (self.planner.grasp_mode == "topdown" and contact_port()) else None
+        self._td = None
+        self.diag_scene = None              # AALTO_TD_DIAG=1 (sim): ground-truth object pose for slip METRICS only
+        if self.planner.grasp_mode == "topdown" and os.environ.get("AALTO_TD_DIAG") == "1":
+            from aaltonomous.sim.scene_client import SceneClient
+            self.diag_scene = SceneClient()
         # Optional RL grasp residual (aaltonomous/rl/skill.py). OFF unless cfg["rl_grasp"] or $AALTO_RL_GRASP
         # names an exported actor; with it off nothing below changes.
         rl = self.cfg.get("rl_grasp") or os.environ.get("AALTO_RL_GRASP")
@@ -375,6 +385,7 @@ class ClassicalPolicy:
         self.grasp_log.append(rec)
         self._exec = {"plan": plan, "side": plan.side, "ph": ph, "stage": "grasp", "ins_a": None, "ins_h": None,
                       "arm0": self.arm_cmd.copy(), "waited": 0, "recover": 0, "rec": rec}
+        self._td = TopDownExec(self, plan) if (self.planner.grasp_mode == "topdown" and "approach" in ph) else None
         self.monitor.restart()
 
     def _count_drop(self, plan):
@@ -405,6 +416,14 @@ class ClassicalPolicy:
         return {"arm_q_target": a.copy(), "hand_q_target": h.copy(), "done": False}
 
     def _step_exec(self, obs, t):
+        prev = None if self.hand_cmd is None else self.hand_cmd.copy()    # last EMITTED hand command
+        out = self._step_exec_inner(obs, t)
+        ex, td = self._exec, self._td
+        if ex is not None and td is not None and td.hold is not None and ex["stage"] in ("grasp", "verify", "carry"):
+            out = td.grip(out, obs, t, prev)       # top-down: frozen capped hold command during lift / verify / carry
+        return out
+
+    def _step_exec_inner(self, obs, t):
         ex, v = self._exec, self.cfg["verify"]
         if ex["ins_a"] is not None and len(ex["ins_a"]):
             return self._pop_ins()
@@ -413,6 +432,12 @@ class ClassicalPolicy:
         k = len(plan.arm) - len(self.queue_a)          # plan ticks already handed out
         vchunk = max(1, int(v.get("chunk", 5)))
         skill_on = self.skill is not None and self.skill.active
+        td = self._td
+        if ex["stage"] == "grasp" and td is not None:
+            r = td.step(obs, t, k, ph)
+            if r is not None:
+                return r
+            k = len(plan.arm) - len(self.queue_a)
         if ex["stage"] == "grasp":
             if k < ph["lift"][1]:
                 if skill_on:
@@ -425,6 +450,13 @@ class ClassicalPolicy:
         if ex["stage"] == "verify":       # top of the lift: nothing moves on until the grasp is confirmed
             verdict = self.monitor.sample(obs, self.hand_cmd, side)
             th, fi = self.monitor.last_load
+            if verdict == "held" and td is not None and td.verify_contacts() is False:
+                verdict = "unsure"           # finger load says held, the PhysX contacts disagree: do not lift on
+                self._vlog(t, "[TD] finger load says held but thumb + finger contacts are not both on the object")
+            if verdict == "held" and td is not None:
+                td.diag(obs, t, "verified")
+                td.log(t, "GRASP VERIFIED", f"load thumb {th:.3f} fingers {fi:.3f} rad, contacts {td.rec.get('verified_contacts')}")
+                td.log(t, "LIFTING")
             if verdict == "held":
                 rec["grasp"] = "confirmed"
                 self._vlog(t, f"grasp confirmed ({plan.color} {side}): finger load thumb {th:.3f} fingers {fi:.3f} rad")
@@ -451,6 +483,10 @@ class ClassicalPolicy:
                 return self._pop(min(vchunk, ph["open"][0] - k))
             rec["transit"] = "ok"
             ex["stage"] = "release"
+            if td is not None:
+                td.diag(obs, t, "release")
+                td.release(k, ph)
+                td.log(t, "RELEASE")
         if ex["stage"] == "release":
             if k < ph["open"][1]:
                 if skill_on:      # the RL hand residual is taken out by the skill itself (rate-limited), not by a jump
@@ -489,6 +525,9 @@ class ClassicalPolicy:
             if rec["release"] != "failed":
                 self._count_drop(plan)
             self._vlog(t, f"release {rec['release']} ({plan.color} {side}): load {th + fi:.3f} rad, recoveries {ex['recover']}")
+            if td is not None:
+                td.rec["release"] = rec["release"]
+                td.dump(t, "released")
             self.queue_h[:, sl] = self.post["open"][sl]     # the hand is in `open` already: no second ramp on the way home
             ex["stage"] = "finish"
         return self._pop()          # finish: retreat + home as planned
@@ -543,6 +582,8 @@ class ClassicalPolicy:
             self._vlog(t, f"recovery path had {clips} predicted safety clips: joint move home instead")
             A, Hd = self.planner.go_to(cur_a, cur_h, ex["arm0"], hand_open)
         rec["grasp" if kind.startswith("grasp") else "transit"] = kind
+        if self._td is not None:
+            self._td.dump(t, f"abort:{kind}")
         self._vlog(t, f"ABORT {kind} ({plan.color} {side}): {why} -> recover ({len(A) / HZ:.1f} s), no transport / release")
         self._enqueue(A, Hd)
         self._exec = None

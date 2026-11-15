@@ -1,0 +1,233 @@
+[
+ {
+  "shape": "cube",
+  "xy": [
+   0.28,
+   0.09
+  ],
+  "ok": true,
+  "side": "left",
+  "descend_s": 2.33,
+  "descend_speed_mm_s": 13.0,
+  "latency_s": 0.18,
+  "stop_distance_mm": 2.3,
+  "lowest_hand_mm_descend": 6.4,
+  "lowest_hand_mm_close": 6.6,
+  "max_palm_tilt_deg": 0.0,
+  "palm_gap_mm": 22.0
+ },
+ {
+  "shape": "cube",
+  "xy": [
+   0.28,
+   -0.09
+  ],
+  "ok": true,
+  "side": "left",
+  "descend_s": 3.83,
+  "descend_speed_mm_s": 8.1,
+  "latency_s": 0.18,
+  "stop_distance_mm": 1.5,
+  "lowest_hand_mm_descend": 6.0,
+  "lowest_hand_mm_close": 6.6,
+  "max_palm_tilt_deg": 0.1,
+  "palm_gap_mm": 22.0
+ },
+ {
+  "shape": "cube",
+  "xy": [
+   0.34,
+   0.0
+  ],
+  "ok": true,
+  "side": "left",
+  "descend_s": 1.77,
+  "descend_speed_mm_s": 17.6,
+  "latency_s": 0.18,
+  "stop_distance_mm": 3.2,
+  "lowest_hand_mm_descend": 7.4,
+  "lowest_hand_mm_close": 8.0,
+  "max_palm_tilt_deg": 1.2,
+  "palm_gap_mm": 22.0
+ },
+ {
+  "shape": "cube",
+  "xy": [
+   0.34,
+   0.15
+  ],
+  "ok": true,
+  "side": "left",
+  "descend_s": 2.7,
+  "descend_speed_mm_s": 12.2,
+  "latency_s": 0.18,
+  "stop_distance_mm": 2.2,
+  "lowest_hand_mm_descend": 6.0,
+  "lowest_hand_mm_close": 6.6,
+  "max_palm_tilt_deg": 0.0,
+  "palm_gap_mm": 22.0
+ },
+ {
+  "shape": "cube",
+  "xy": [
+   0.4,
+   -0.12
+  ],
+  "ok": false,
+  "reason": "left: IK grasp left; right: carry: no joint-space path above the bin rim"
+ },
+ {
+  "shape": "cylinder",
+  "xy": [
+   0.28,
+   0.09
+  ],
+  "ok": true,
+  "side": "left",
+  "descend_s": 2.37,
+  "descend_speed_mm_s": 12.9,
+  "latency_s": 0.18,
+  "stop_distance_mm": 2.3,
+  "lowest_hand_mm_descend": 6.0,
+  "lowest_hand_mm_close": 6.6,
+  "max_palm_tilt_deg": 0.0,
+  "palm_gap_mm": 22.0
+ },
+ {
+  "shape": "cylinder",
+  "xy": [
+   0.28,
+   -0.09
+  ],
+  "ok": true,
+  "side": "left",
+  "descend_s": 3.83,
+  "descend_speed_mm_s": 8.1,
+  "latency_s": 0.18,
+  "stop_distance_mm": 1.5,
+  "lowest_hand_mm_descend": 6.0,
+  "lowest_hand_mm_close": 6.6,
+  "max_palm_tilt_deg": 0.1,
+  "palm_gap_mm": 22.0
+ },
+ {
+  "shape": "cylinder",
+  "xy": [
+   0.34,
+   0.0
+  ],
+  "ok": true,
+  "side": "left",
+  "descend_s": 1.77,
+  "descend_speed_mm_s": 17.6,
+  "latency_s": 0.18,
+  "stop_distance_mm": 3.2,
+  "lowest_hand_mm_descend": 7.4,
+  "lowest_hand_mm_close": 8.0,
+  "max_palm_tilt_deg": 1.2,
+  "palm_gap_mm": 22.0
+ },
+ {
+  "shape": "cylinder",
+  "xy": [
+   0.34,
+   0.15
+  ],
+  "ok": true,
+  "side": "left",
+  "descend_s": 2.7,
+  "descend_speed_mm_s": 12.2,
+  "latency_s": 0.18,
+  "stop_distance_mm": 2.2,
+  "lowest_hand_mm_descend": 6.0,
+  "lowest_hand_mm_close": 6.6,
+  "max_palm_tilt_deg": 0.0,
+  "palm_gap_mm": 22.0
+ },
+ {
+  "shape": "cylinder",
+  "xy": [
+   0.4,
+   -0.12
+  ],
+  "ok": false,
+  "reason": "left: IK grasp left; right: carry: no joint-space path above the bin rim"
+ },
+ {
+  "shape": "triangle",
+  "xy": [
+   0.28,
+   0.09
+  ],
+  "ok": true,
+  "side": "left",
+  "descend_s": 6.1,
+  "descend_speed_mm_s": 5.8,
+  "latency_s": 0.18,
+  "stop_distance_mm": 1.1,
+  "lowest_hand_mm_descend": 6.0,
+  "lowest_hand_mm_close": 6.6,
+  "max_palm_tilt_deg": 0.2,
+  "palm_gap_mm": 22.0
+ },
+ {
+  "shape": "triangle",
+  "xy": [
+   0.28,
+   -0.09
+  ],
+  "ok": true,
+  "side": "left",
+  "descend_s": 3.83,
+  "descend_speed_mm_s": 8.1,
+  "latency_s": 0.18,
+  "stop_distance_mm": 1.5,
+  "lowest_hand_mm_descend": 6.0,
+  "lowest_hand_mm_close": 6.6,
+  "max_palm_tilt_deg": 0.1,
+  "palm_gap_mm": 22.0
+ },
+ {
+  "shape": "triangle",
+  "xy": [
+   0.34,
+   0.0
+  ],
+  "ok": true,
+  "side": "left",
+  "descend_s": 1.77,
+  "descend_speed_mm_s": 17.6,
+  "latency_s": 0.18,
+  "stop_distance_mm": 3.2,
+  "lowest_hand_mm_descend": 7.4,
+  "lowest_hand_mm_close": 8.0,
+  "max_palm_tilt_deg": 1.2,
+  "palm_gap_mm": 22.0
+ },
+ {
+  "shape": "triangle",
+  "xy": [
+   0.34,
+   0.15
+  ],
+  "ok": true,
+  "side": "left",
+  "descend_s": 2.7,
+  "descend_speed_mm_s": 12.2,
+  "latency_s": 0.18,
+  "stop_distance_mm": 2.2,
+  "lowest_hand_mm_descend": 6.0,
+  "lowest_hand_mm_close": 6.6,
+  "max_palm_tilt_deg": 0.0,
+  "palm_gap_mm": 22.0
+ },
+ {
+  "shape": "triangle",
+  "xy": [
+   0.4,
+   -0.12
+  ],
+  "ok": false,
+  "reason": "left: IK grasp left; right: carry: no joint-space path above the bin rim"
+ }
+]
