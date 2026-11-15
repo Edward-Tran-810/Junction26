@@ -315,6 +315,8 @@ verify:
     load_stuck: 0.015         # rad, L1 over 7 joints in the `open` posture: above = an object is hooked in the fingers
     recover_attempts: 2
     recover_postures: [scissor_a, scissor_b, release]   # hand.<name>, in turn, each held recover_hold_s
+    topdown_shake: [scissor_a, scissor_b, release]      # grasp.mode=topdown: ALWAYS run once before the check (objects
+                                                        # hanging on the fingertips read "clean": Isaac 2026-11-15)
     recover_hold_s: 0.3
 
 # RL grasp residual (aaltonomous/rl/skill.py; active only when $AALTO_RL_GRASP or `rl_grasp` names an exported

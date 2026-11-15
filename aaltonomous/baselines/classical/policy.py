@@ -499,7 +499,17 @@ class ClassicalPolicy:
                 ex["stage"] = "finish"
             else:
                 hand_open = self.hand_cmd.copy(); hand_open[sl] = self.post["open"][sl]
-                self._insert([hand_open], [float(rc.get("settle_s", 0.5))])
+                seq, holds = [], []
+                if td is not None:
+                    # TOP-DOWN: always run the scissor release once before the check. A cylinder / prism can hang on the
+                    # fingertips after the hand opens (Isaac, submission eval seed 1000 + speed sweep seed 1000): it does
+                    # not load the fingers, so the finger-load check reads "clean" while the object rides back home.
+                    for name in rc.get("topdown_shake", []):
+                        h = self.hand_cmd.copy(); h[sl] = self.post[name][sl]
+                        seq.append(h); holds.append(float(rc.get("recover_hold_s", 0.3)))
+                    if seq:
+                        td.log(t, "RELEASE SHAKE", f"{rc.get('topdown_shake')} before the release check")
+                self._insert(seq + [hand_open], holds + [float(rc.get("settle_s", 0.5))])
                 ex["stage"] = "release_check"
                 return self._pop_ins()
         if ex["stage"] == "release_check":
