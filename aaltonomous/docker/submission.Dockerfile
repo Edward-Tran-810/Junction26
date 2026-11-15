@@ -20,6 +20,7 @@ COPY third_party/xr_teleoperate/assets/g1/g1_body29_hand14.urdf third_party/xr_t
 COPY aaltonomous/__init__.py aaltonomous/
 COPY aaltonomous/deploy/__init__.py aaltonomous/deploy/protocol.py aaltonomous/deploy/policy_server.py aaltonomous/deploy/
 COPY aaltonomous/interface/__init__.py aaltonomous/interface/safety.py aaltonomous/interface/calibration.py \
+     aaltonomous/interface/tasks.py \
      aaltonomous/interface/joint_spec.yaml aaltonomous/interface/calibration.yaml aaltonomous/interface/
 COPY aaltonomous/scene/__init__.py aaltonomous/scene/scene.py aaltonomous/scene/scene.yaml aaltonomous/scene/
 COPY aaltonomous/baselines/__init__.py aaltonomous/baselines/
